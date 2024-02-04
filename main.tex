@@ -103,13 +103,38 @@
 Introduction.
 
 \section{Theory}
+Hills paper ``Parallel lexical analysis and parsing on the AMT
+distributed array processor'' \cite{HILL1992699} describes a method to obtain the path in a deterministic finite automata given a input string. This section will describe the theory of this method and extend the it for tokenization.
+
+% I should probably mention that pareas also uses this paper and does tokenization but I have no idea how they do it.
+\subsection{Data-parallel Lexical Analysis}
+To explain the theory of parallel lexical analysis we first remind the reader of the definition of a deterministic finite automaton.
+\begin{definition}[DFA]
+  A deterministic finite automata \cite{10.5555/1196416} \cite{enwiki:1192025610} is given by a 5-tuple $(Q, \Sigma, \delta, q_0, F)$ where.
+  \begin{enumerate}
+    \item $Q$ is the set of states where $|Q| < \infty$.
+    \item $\Sigma$ is the set of symbols where $|\Sigma| < \infty$.
+    \item $\delta: \Sigma \to Q \to Q$ is the transition function.
+    \item $q_0 \in Q$ is the initial state.
+    \item $F\subseteq Q$ is the set of accepting states.
+  \end{enumerate}
+\end{definition}
+\noindent Note that this definition utilizes currying for the transition function $\delta$. This is done in the definition because if we have any two functions $g = \delta(a)$ and $f = \delta(a')$ then it follows from composition that for any $q \in Q$.
+\begin{align*}
+  g(f(q)) = (g \circ f) (q)
+\end{align*}
+This allows for an alternative way of determining if a string can be produced by an DFA. Instead of first evaluating $f(q)$, then $g(f(q))$ and then checking if this state is a member of $F$. We could instead partially apply $\delta$ to the symbols and then compose them to a single functions which could be used to determine if a string is valid. This sets the stage for data-parallel lexing, we want to find a way to make the problem into a \texttt{map-reduce}.
+
+
 
 \begin{definition}
   A endofunction is a function $f:A \to A$ where the domain is equal to its codomain.
 \end{definition}
 
 
-\cite{HILL1992699}
+\subsection{Parallel Tokenization}
+
+
 
 \section{Conclusion}
 Conclusion.
