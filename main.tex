@@ -123,7 +123,7 @@ To explain the theory of parallel lexical analysis we first remind the reader of
 \begin{align*}
   g(f(q)) = (g \circ f) (q)
 \end{align*}
-This allows for an alternative way of determining if a string can be produced by an DFA. Instead of first evaluating $f(q)$, then $g(f(q))$ and then checking if this state is a member of $F$. We could instead partially apply $\delta$ to the symbols and then compose them to a single function which could be used to determine if a string is valid. This sets the stage for data-parallel lexing, we want to find a way to make the problem into a \texttt{map-reduce}.
+This allows for an alternative way of determining if a string can be produced by an DFA. Instead of first evaluating $f(q)$, then $g(f(q))$ and then checking if this state is a member of $F$. We could instead partially apply $\delta$ to the symbols and then compose them to a single function which could be used to determine if a string is valid. This sets the stage for data-parallel lexing, we want to find a way to make the problem into a \texttt{map-reduce}. We want to do this because it can be computed using a data-parallel implementation unlike the normal way of traversing a DFA.
 
 
 
