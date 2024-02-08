@@ -62,6 +62,7 @@
 \theoremstyle{definition}
 \newtheorem{definition}{Definition}[section]
 \newtheorem{proposition}{Proposition}[section]
+\newtheorem{corollary}{Corollary}[section]
 \newtheorem*{remark}{Remark}
 \newtheorem{lemma}{Lemma}[section]
 \newtheorem{theorem}{Theorem}
@@ -114,22 +115,48 @@ To explain the theory of parallel lexical analysis we first remind the reader of
   \begin{enumerate}
     \item $Q$ is the set of states where $|Q| < \infty$.
     \item $\Sigma$ is the set of symbols where $|\Sigma| < \infty$.
-    \item $\delta: \Sigma \to Q \to Q$ is the transition function.
+    \item $\delta: \Sigma \times Q \to Q$ is the transition function.
     \item $q_0 \in Q$ is the initial state.
     \item $F\subseteq Q$ is the set of accepting states.
   \end{enumerate}
 \end{definition}
-\noindent Note that this definition utilizes currying for the transition function $\delta$. This is done in the definition because if we have any two functions $g = \delta(a)$ and $f = \delta(a')$ then it follows from composition that for any $q \in Q$.
+\noindent This definition is fine as is but we will need to reformualte it to develop data-parallel lexical analysis. We would want the definition to use a curried transition function. But for this to hold then the DFA would also have to be total.
+\begin{definition}[Total DFA]
+  A DFA $(Q, \Sigma, \delta, q_0, F)$ is said to be total if and only if
+  \begin{align*}
+    \delta(a, q) \in Q : \forall (a, q) \in \Sigma \times Q
+  \end{align*}
+  If a DFA is total we may use a curried transition function $\delta: \Sigma \to Q \to Q$.
+\end{definition}
+\noindent This is needed since else the the function would not be fully defined in the domains $\Sigma$ and $Q$.
+
+The reason for doing so is because if we have any two functions $g = \delta(a)$ and $f = \delta(a')$ then it follows from composition that.
 \begin{align*}
   g(f(q)) = (g \circ f) (q)
 \end{align*}
 This allows for an alternative way of determining if a string can be produced by an DFA. Instead of first evaluating $f(q)$, then $g(f(q))$ and then checking if this state is a member of $F$. We could instead partially apply $\delta$ to the symbols and then compose them to a single function which could be used to determine if a string is valid. This sets the stage for data-parallel lexing, we want to find a way to make the problem into a \texttt{map-reduce}. We want to do this because it can be computed using a data-parallel implementation unlike the normal way of traversing a DFA.
 
+For the ability to use a data-parallel \texttt{map-reduce} we must have a monoidal structure. Here a set $\Delta$ of all the composed partially applied $\delta$ functions needs to be closed under function composition.
 
+\begin{proposition}[DFA Composition Closure]
+  Given a total DFA, the set of all partially applied compositions that is closed under function composition $\Delta: \{Q \to Q\}$. $\Delta$ is the solution to the following equation such that $j$ is smallest index where it holds that $\Delta_j = \Delta_k$ for all $k > j$.
+  \begin{align*}
+    \Delta_1 &= \{\delta(a) : a \in \Sigma \} \\
+    \Delta_{i + 1} &= \Delta_i \cup \{f \circ g : f, g \in \Delta_i\}
+  \end{align*}
+\end{proposition}
+\begin{proof}
+  We will start by showing that an solution $\Delta$ exists. First note that $\Delta_i \subseteq \Delta_{i + 1}$ since $\Delta_{i + 1}$ is a union of $\Delta_i$ and another set. Secondly note that since $|Q| < \infty$ then a finite amount of functions of the form $Q \to Q$ can be created. This leads to at some point alle sets will be equal $\Delta_i = \Delta_{i + 1}$ and this point is the solutaion $\Delta$.
+  
+  For $\Delta$ to be closed under function composition, then for arbitray $f, g \in \Delta$ it must hold that $f \circ g \in \Delta$. 
+  As a consequence of this all combinations $\Delta_1$ must be constructable. 
 
-\begin{definition}
-  A endofunction is a function $f:A \to A$ where the domain is equal to its codomain.
-\end{definition}
+  (I have to think a little harder.)
+\end{proof}
+
+\begin{corollary}[DFA monoid]
+  DFA Composition Closure induces a monoid $(\Delta \cup \{id\}, \circ)$ where $id: Q \to Q$ and $id(q) = q$.
+\end{corollary}
 
 
 \subsection{Parallel Tokenization}
