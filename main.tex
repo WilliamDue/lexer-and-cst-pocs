@@ -146,7 +146,7 @@ For the ability to use a data-parallel \texttt{map-reduce} we must have a monoid
   \end{align*}
 \end{proposition}
 \begin{proof}
-  We will start by showing that an solution $\Delta$ exists. First note that $\Delta_i \subseteq \Delta_{i + 1}$ since $\Delta_{i + 1}$ is a union of $\Delta_i$ and another set. Secondly note that since $|Q| < \infty$ then a finite amount of functions of the form $Q \to Q$ can be created. This leads to at some point alle sets will be equal $\Delta_i = \Delta_{i + 1}$ and this point is the solutaion $\Delta$.
+  We will start by showing that a solution $\Delta$ exists. First note that the cardinality is increasing monotonically i.e. $\Delta_i \subseteq \Delta_{i + 1}$ since $\Delta_{i + 1}$ is a union of $\Delta_i$ and another set. Secondly note that since $|Q| < \infty$ then a finite amount of functions of the form $Q \to Q$ can be created. Since the set is bounded and increasing then at some point $\Delta_i = \Delta_{i + 1}$ and the smalles $i$ where it holdsis the solution $\Delta$.
 
   For $\Delta$ to be closed under function composition, then for arbitray $f, g \in \Delta$ it must hold that $f \circ g \in \Delta$. 
   As a consequence of this all combinations $\Delta_1$ of a given length must be constructable. To show this we will need to show that every combination of length $i$ or less is found in  
