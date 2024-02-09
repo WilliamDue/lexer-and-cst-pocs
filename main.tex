@@ -148,7 +148,7 @@ For the ability to use a data-parallel \texttt{map-reduce} we must have a monoid
 \begin{proof}
   We will start by showing that a solution $\Delta$ exists. First note that the cardinality is monotonically increasing i.e. $\Delta_i \subseteq \Delta_{i + 1}$ since $\Delta_{i + 1}$ is a union of $\Delta_i$ and another set. Secondly note that since $|Q| < \infty$ then a finite amount of functions of the form $Q \to Q$ can be created. Since the set is bounded and increasing then at some point $\Delta_i = \Delta_{i + 1}$ and the smallest $i$ where it holds is the solution $\Delta$.
 
-  For $\Delta$ to be closed under function composition, then for arbitray $f, g \in \Delta$ it must hold that $f \circ g \in \Delta$. Since $\Delta_1$ is the set of endofunctions that contructs $\Delta$ then all elements of $\Delta$ can be expressed on the form.
+  For $\Delta$ to be closed under function composition, then for arbitray $f, g \in \Delta$ it must hold that $f \circ g \in \Delta$. Since $\Delta_1$ is the set of endofunctions that contructs $\Delta$ then all elements of $\Delta$ can be expressed of the form.
   \begin{align*}
     \delta(a_1) \circ \dots \circ \delta(a_n) \in \Delta
   \end{align*}
