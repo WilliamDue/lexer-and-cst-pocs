@@ -158,8 +158,7 @@ For the ability to use a data-parallel \texttt{map-reduce} we must have a monoid
 
   Step: Given $\Delta_i$ contains every combination of length $i$ or less then we to show this implies that $\Delta_{i + 1}$ will contain every combination of length $i + 1$ or less.
 
-
-  By definition $\Delta_{i + 1}$ it must contain every of length $i$ or less due to $\Delta_i \leq \Delta_{i + 1}$. It remains to show that every sequence of length $i + 1$ is a member of $\Delta_{i + 1}$. We know $\Delta_i$ will contain every sequence of length $1$ and $i$ by monotonicity. It is also known that a direct product of $\Delta_i$ is used in the definition meaning $\{f \circ g : f, g \in \Delta_i\} \subseteq \Delta_{i + 1}$. There by a direct product between sequences of length $1$ and $i$ leading to every sequence of length $i + 1$ being a member of $\Delta_{i + 1}$. Thereby $\Delta$ is closed under function composition.
+  By definition $\Delta_{i + 1}$ must contain every combination of length $i$ or less due to $\Delta_i \subseteq \Delta_{i + 1}$. It remains to show that every sequence of length $i + 1$ is a member of $\Delta_{i + 1}$. We know $\Delta_i$ will contain every sequence of length $1$ and $i$ by monotonicity. It is also known that a direct product of $\Delta_i$ is used in the definition of $\Delta_{i + 1}$ so $\{f \circ g : f, g \in \Delta_i\} \subseteq \Delta_{i + 1}$. A direct product between sequences of length $1$ and $i$ will create every sequence of length $i + 1$ and therefore every sequence of length $i + 1$ is a member of $\Delta_{i + 1}$. Thereby $\Delta$ is closed under function composition.
 \end{proof}
 \noindent Since $\Delta$ is closed under function composition then it follows that $\Delta$ can induce a monoidal structure.
 
