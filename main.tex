@@ -139,26 +139,26 @@ This allows for an alternative way of determining if a string can be produced by
 For the ability to use a data-parallel \texttt{map-reduce} we must have a monoidal structure. Here $\Delta$ is the set of all the composed partially applied $\delta$ functions needs to be closed under function composition.
 
 \begin{proposition}[DFA Endofunction Closure]
-  Given a total DFA and an associative binary operation $\oplus: (Q \to Q) \times (Q \to Q) \to (Q \to Q)$. Then the set of endofunctions $\Delta: \{Q \to Q\}$ will be closed under $\oplus$. The set $\Delta$ is the set $\Delta_i$ in the recurrence relation with the smallest $i$ such that $\Delta_i = \Delta_{i + 1}$.
+  Given a total DFA and an associative binary operation $\oplus: (Q \to Q) \times (Q \to Q) \to (Q \to Q)$. Then the set of endofunctions $\Delta: Q^Q$ will be closed under $\star$. The set $\Delta$ is the set $\Delta_i$ in the recurrence relation with the smallest $i$ such that $\Delta_i = \Delta_{i + 1}$.
   \begin{align*}
     \Delta_1 &= \{\delta(a) : a \in \Sigma \} \\
-    \Delta_{i + 1} &= \Delta_i \cup \{f \circ g : f, g \in \Delta_i\}
+    \Delta_{i + 1} &= \Delta_i \cup \{f \star g : f, g \in \Delta_i\}
   \end{align*}
 \end{proposition}
 \begin{proof}
   We will start by showing that a solution $\Delta$ exists. First note that the cardinality is monotonically increasing i.e. $\Delta_i \subseteq \Delta_{i + 1}$ since $\Delta_{i + 1}$ is a union of $\Delta_i$ and another set. Secondly note that since $|Q| < \infty$ then a finite amount of functions of the form $Q \to Q$ can exists. Since the set is bounded and increasing then at some point $\Delta_i = \Delta_{i + 1}$ and the smallest $i$ where it holds is the solution $\Delta$.
 
-  For $\Delta$ to be closed under $\oplus$, then for arbitray $f, g \in \Delta$ it must hold that $f \circ g \in \Delta$. Since $\Delta_1$ is the set of endofunctions that contructs $\Delta$ and $\oplus$ is associative then all elements of $\Delta$ can be expressed of the form.
+  For $\Delta$ to be closed under $\star$, then for arbitray $f, g \in \Delta$ it must hold that $f \star g \in \Delta$. Since $\Delta_1$ is the set of endofunctions that contructs $\Delta$ and $\star$ is associative then all elements of $\Delta$ can be expressed of the form.
   \begin{align*}
-    \delta(a_1) \circ \dots \circ \delta(a_n) \in \Delta
+    \delta(a_1) \star \dots \star \delta(a_n) \in \Delta
   \end{align*}
-  If all permutations with replacement of $\Delta_1$ of any sequence length are members of $\Delta$ then $\Delta$ would be closed under $\oplus$. Futhermore, it is known that $\Delta$ is finite so the sequences at some point $\Delta_i = \Delta_{i + 1}$ would only add new sequences but no new endofunctions. Therefore it suffices to show that if all sequences of length $k$ where $1 \leq k \leq i$ is a subset of $\Delta_i$ then $\Delta$ is closed under $\oplus$. This can be shown using a proof by induction.
+  If all permutations with replacement of $\Delta_1$ of any sequence length are members of $\Delta$ then $\Delta$ would be closed under $\star$. Futhermore, it is known that $\Delta$ is finite so the sequences at some point $\Delta_i = \Delta_{i + 1}$ would only add new sequences but no new endofunctions. Therefore it suffices to show that if all sequences of length $k$ where $1 \leq k \leq i$ is a subset of $\Delta_i$ then $\Delta$ is closed under $\star$. This can be shown using a proof by induction.
 
   Base: $\Delta_1$ trivially holds since it only contains sequences of length one and they are the initial endofunctions.
 
   Step: Given $\Delta_i$ contains every sequence of length $i$ or less then we to show this implies that $\Delta_{i + 1}$ will contain every sequence of length $i + 1$ or less.
 
-  By the induction hypothesis $\Delta_{i + 1}$ must contain every sequence of length $i$ or less due to $\Delta_i \subseteq \Delta_{i + 1}$. It remains to show that every sequence of length $i + 1$ is a member of $\Delta_{i + 1}$. It is known that a direct product of $\Delta_i$ is used in the definition of $\Delta_{i + 1}$ so $\{f \circ g : f, g \in \Delta_i\} \subseteq \Delta_{i + 1}$. A direct product between sequences of length $1$ and $i$ will create every sequence of length $i + 1$ and therefore every sequence of length $i + 1$ is a member of $\Delta_{i + 1}$. Thereby $\Delta$ is closed under $\oplus$.
+  By the induction hypothesis $\Delta_{i + 1}$ must contain every sequence of length $i$ or less due to $\Delta_i \subseteq \Delta_{i + 1}$. It remains to show that every sequence of length $i + 1$ is a member of $\Delta_{i + 1}$. It is known that a direct product of $\Delta_i$ is used in the definition of $\Delta_{i + 1}$ so $\{f \star g : f, g \in \Delta_i\} \subseteq \Delta_{i + 1}$. A direct product between sequences of length $1$ and $i$ will create every sequence of length $i + 1$ and therefore every sequence of length $i + 1$ is a member of $\Delta_{i + 1}$. Thereby $\Delta$ is closed under $\star$.
 \end{proof}
 \noindent Since $\Delta$ is closed under an arbitrary binary associative operations then it follows that $\Delta$ and function composition induces a monoidal structure.
 
@@ -176,12 +176,30 @@ For the ability to use a data-parallel \texttt{map-reduce} we must have a monoid
 \end{algorithm}
 
 \subsection{Data-parallel Tokenization}
-For data-parallel tokenization we need to extent data-parallel algorithm \ref{algo:lex} will be needed to be extended. The idea will be to use a data-parallel \texttt{map-scan} instead since it will gives all the states. This is also the methods described in Hills \cite{HILL1992699} paper. The problem is we need to be able to recongnize the longest strech of symbols that results in a token. And we also need to restart the traversal of DFA if a final state is hit while no options to traverse further.
-\begin{definition}[Dead state DFA]
+For data-parallel tokenization we need to extent data-parallel algorithm \ref{algo:lex} will be needed to be extended. The idea will be to use a data-parallel \texttt{map-scan} instead since it will gives all the states. This is also the methods described in Hills \cite{HILL1992699} paper. The problem is we need to be able to recongnize the longest strech of symbols that results in a token. And we also need to restart the traversal of DFA if a final state is hit while no options to traverse further. To do so we will need the following definitions.
+\begin{definition}[Total DFA with a Dead State]
+Given a DFA it is made total with a dead state by defining a new set of states $Q' = Q \cup \{d\}$ where $d$ is the dead state. Additionally a new transition function $\delta'$ is defined.
+\begin{align*}
+  \delta'(a, q) = \begin{cases}
+    d &  (a, q) \notin \text{dom}(\delta) \\
+    \delta(a, q) & \text{otherwise}
+  \end{cases}
+\end{align*}
   
 \end{definition}
+\begin{definition}[Token Function]
+  Given a DFA and a set of tokens $T$. The token function $\mathcal{T}: F \to T$ is a function that maps accepting states to some token.
+\end{definition}
+
 \begin{definition}[Safe Composition]
-  
+  Given a total DFA with a dead state, the safe composition $\oplus$ is defined as followed.
+  \begin{align*}
+    (f \oplus g)(x) =
+    \begin{cases}
+      q_0 & f(g(x)) = d \land g(x) \in F \\
+      f(g(x)) & \text{otherwise} 
+    \end{cases}
+  \end{align*}
 \end{definition}
 
 \section{Conclusion}
