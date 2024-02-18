@@ -69,6 +69,8 @@
 \newtheorem{algorithm}{Algorithm}[section]
 \newtheorem{example}{Example}[section]
 \DeclareMathOperator{\sign}{sign}
+\newcommand\doubleplus{+\kern-1.3ex+\kern0.8ex}
+\newcommand\mdoubleplus{\ensuremath{\mathbin{+\mkern-10mu+}}}
 
 \fancyhf{}
 \setlength{\headheight}{14.49998pt}
@@ -138,27 +140,27 @@ This allows for an alternative way of determining if a string can be produced by
 
 For the ability to use a data-parallel \texttt{map-reduce} we must have a monoidal structure. Here $\Delta$ is the set of all the composed partially applied $\delta$ functions needs to be closed under function composition.
 
-\begin{proposition}[DFA Endofunction Closure]
-  Given a total DFA and an associative binary operation $\oplus: (Q \to Q) \times (Q \to Q) \to (Q \to Q)$. Then the set of endofunctions $\Delta: Q^Q$ will be closed under $\star$. The set $\Delta$ is the set $\Delta_i$ in the recurrence relation with the smallest $i$ such that $\Delta_i = \Delta_{i + 1}$.
+\begin{proposition}[DFA Composition Closure]
+  Given a total then the set of endofunctions $\Delta: Q^Q$ will be closed under composition. The set $\Delta$ is the set $\Delta_i$ in the recurrence relation with the smallest $i$ such that $\Delta_i = \Delta_{i + 1}$.
   \begin{align*}
     \Delta_1 &= \{\delta(a) : a \in \Sigma \} \\
-    \Delta_{i + 1} &= \Delta_i \cup \{f \star g : f, g \in \Delta_i\}
+    \Delta_{i + 1} &= \Delta_i \cup \{f \circ g : f, g \in \Delta_i\}
   \end{align*}
 \end{proposition}
 \begin{proof}
-  We will start by showing that a solution $\Delta$ exists. First note that the cardinality is monotonically increasing i.e. $\Delta_i \subseteq \Delta_{i + 1}$ since $\Delta_{i + 1}$ is a union of $\Delta_i$ and another set. Secondly note that since $|Q| < \infty$ then a finite amount of functions of the form $Q \to Q$ can exists. Since the set is bounded and increasing then at some point $\Delta_i = \Delta_{i + 1}$ and the smallest $i$ where it holds is the solution $\Delta$.
+  We will circt by showing that a solution $\Delta$ exists. First note that the cardinality is monotonically increasing i.e. $\Delta_i \subseteq \Delta_{i + 1}$ since $\Delta_{i + 1}$ is a union of $\Delta_i$ and another set. Secondly note that since $|Q| < \infty$ then a finite amount of functions of the form $Q \to Q$ can exists. Since the set is bounded and increasing then at some point $\Delta_i = \Delta_{i + 1}$ and the smallest $i$ where it holds is the solution $\Delta$.
 
-  For $\Delta$ to be closed under $\star$, then for arbitray $f, g \in \Delta$ it must hold that $f \star g \in \Delta$. Since $\Delta_1$ is the set of endofunctions that contructs $\Delta$ and $\star$ is associative then all elements of $\Delta$ can be expressed of the form.
+  For $\Delta$ to be closed under composition, then for arbitray $f, g \in \Delta$ it must hold that $f \circ g \in \Delta$. Since $\Delta_1$ is the set of endofunctions that contructs $\Delta$ and composition is associative then all elements of $\Delta$ can be expressed of the form.
   \begin{align*}
-    \delta(a_1) \star \dots \star \delta(a_n) \in \Delta
+    \delta(a_1) \circ \dots \circ \delta(a_n) \in \Delta
   \end{align*}
-  If all permutations with replacement of $\Delta_1$ of any sequence length are members of $\Delta$ then $\Delta$ would be closed under $\star$. Futhermore, it is known that $\Delta$ is finite so the sequences at some point $\Delta_i = \Delta_{i + 1}$ would only add new sequences but no new endofunctions. Therefore it suffices to show that if all sequences of length $k$ where $1 \leq k \leq i$ is a subset of $\Delta_i$ then $\Delta$ is closed under $\star$. This can be shown using a proof by induction.
+  If all permutations with replacement of $\Delta_1$ of any sequence length are members of $\Delta$ then $\Delta$ would be closed under composition. Futhermore, it is known that $\Delta$ is finite so the sequences at some point $\Delta_i = \Delta_{i + 1}$ would only add new sequences but no new endofunctions. Therefore it suffices to show that if all sequences of length $k$ where $1 \leq k \leq i$ is a subset of $\Delta_i$ then $\Delta$ is closed under composition. This can be shown using a proof by induction.
 
   Base: $\Delta_1$ trivially holds since it only contains sequences of length one and they are the initial endofunctions.
 
   Step: Given $\Delta_i$ contains every sequence of length $i$ or less then we to show this implies that $\Delta_{i + 1}$ will contain every sequence of length $i + 1$ or less.
 
-  By the induction hypothesis $\Delta_{i + 1}$ must contain every sequence of length $i$ or less due to $\Delta_i \subseteq \Delta_{i + 1}$. It remains to show that every sequence of length $i + 1$ is a member of $\Delta_{i + 1}$. It is known that a direct product of $\Delta_i$ is used in the definition of $\Delta_{i + 1}$ so $\{f \star g : f, g \in \Delta_i\} \subseteq \Delta_{i + 1}$. A direct product between sequences of length $1$ and $i$ will create every sequence of length $i + 1$ and therefore every sequence of length $i + 1$ is a member of $\Delta_{i + 1}$. Thereby $\Delta$ is closed under $\star$.
+  By the induction hypothesis $\Delta_{i + 1}$ must contain every sequence of length $i$ or less due to $\Delta_i \subseteq \Delta_{i + 1}$. It remains to show that every sequence of length $i + 1$ is a member of $\Delta_{i + 1}$. It is known that a direct product of $\Delta_i$ is used in the definition of $\Delta_{i + 1}$ so $\{f \circ g : f, g \in \Delta_i\} \subseteq \Delta_{i + 1}$. A direct product between sequences of length $1$ and $i$ will create every sequence of length $i + 1$ and therefore every sequence of length $i + 1$ is a member of $\Delta_{i + 1}$. Thereby $\Delta$ is closed under composition.
 \end{proof}
 \noindent Since $\Delta$ is closed under an arbitrary binary associative operations then it follows that $\Delta$ and function composition induces a monoidal structure.
 
@@ -166,41 +168,90 @@ For the ability to use a data-parallel \texttt{map-reduce} we must have a monoid
   DFA composition closure induces a semigroup which in turn induces the monoid $(\Delta \cup \{id\}, \circ)$ where $id: Q \to Q$ and $id(q) = q$.
 \end{corollary}
 \noindent Knowing this we can establish the following algorithm
-\begin{algorithm}[Data-parallel Lexical Analysis]\label{algo:lex}
+\begin{algorithm}[Data-parallel String Match]\label{algo:lex}
   It can be determined in $O(n)$ work and $O(\log n)$ span if a string can be produced by a DFA. First construct the total DFA $(Q, \Sigma, \delta, q_0, F)$ from the DFA.
   \begin{enumerate}
     \item Partially apply $\delta$ to every symbol in the input string such that it becomes a sequence of endofunctions.
-    \item Reduce the endofunction into a single endofunction $\delta': Q \to Q$.
+    \begin{align*}
+      \mathbf{map}\: \delta \: [a_1, a_2, \dots, a_{n - 1}, a_n] = [\delta(a_1), \delta(a_2), \dots, \delta(a_{n - 1}), \delta(a_n)]
+    \end{align*}
+    \item Reduce the endofunction into a single endofunction $\delta': Q \to Q$. \begin{align*}
+      \mathbf{reduce} \: (\circ) \: id \: [\delta(a_1), \delta(a_2), \dots, \delta(a_{n - 1}), \delta(a_n)] = \delta'
+    \end{align*}
     \item Evaluate $\delta'(q_0)$ and determine if $\delta'(q_0) \in F$.
   \end{enumerate}
 \end{algorithm}
 
 \subsection{Data-parallel Tokenization}
-For data-parallel tokenization we need to extent data-parallel algorithm \ref{algo:lex} will be needed to be extended. The idea will be to use a data-parallel \texttt{map-scan} instead since it will gives all the states. This is also the methods described in Hills \cite{HILL1992699} paper. The problem is we need to be able to recongnize the longest strech of symbols that results in a token. And we also need to restart the traversal of DFA if a final state is hit while no options to traverse further. To do so we will need the following definitions.
-\begin{definition}[Total DFA with a Dead State]
-Given a DFA it is made total with a dead state by defining a new set of states $Q' = Q \cup \{d\}$ where $d$ is the dead state. Additionally a new transition function $\delta'$ is defined.
-\begin{align*}
-  \delta'(a, q) = \begin{cases}
-    d &  (a, q) \notin \text{dom}(\delta) \\
-    \delta(a, q) & \text{otherwise}
-  \end{cases}
-\end{align*}
-  
-\end{definition}
+For data-parallel tokenization we need to extent data-parallel algorithm \ref{algo:lex} will be needed to be extended. The idea will be to use a data-parallel \texttt{map-scan} instead since it will gives all the states. This is also the methods described in Hills \cite{HILL1992699} paper. The problem is we need to be able to recongnize the longest strech of symbols that results in a token. And we also need to restart the traversal of DFA if a final state is hit while no options to traverse further. To do so we first need af function to define a function to recongnize tokens.
+
 \begin{definition}[Token Function]
   Given a DFA and a set of tokens $T$. The token function $\mathcal{T}: F \to T$ is a function that maps accepting states to some token.
 \end{definition}
+\noindent We will also need a single state to point to which is the dead state. This will become useful when the DFA needs to be traversed multiple times. Since we will need to be able to recongnize when the end of a traversal is reached and we have to restart.
+
+\begin{definition}[Total DFA with a Dead State]
+  Given a DFA it is made total with a dead state by defining a new set of states $Q' = Q \cup \{d\}$ where $d$ is the dead state. Additionally a new transition function $\delta'$ is defined.
+  \begin{align*}
+    \delta'(a, q) = \begin{cases}
+      d &  (a, q) \notin \text{dom}(\delta) \\
+      \delta(a, q) & \text{otherwise}
+    \end{cases}
+  \end{align*}
+\end{definition}
+\noindent Now that we have a definition of a DFA where the dead state is known another problem is needed to be solved. The problem is as mentioned before that the traversal of the DFA has to be restarted if a dead state is reached after an accepting state. This done using the following binary operation.
 
 \begin{definition}[Safe Composition]
-  Given a total DFA with a dead state, the safe composition $\oplus$ is defined as followed.
+  Given a DFA with two endofunctions $f = \delta(a)$ and $g = \delta(b)$. The operation $\oplus$ makes $f$ safe to compose such that it will continue traversing the DFA.
   \begin{align*}
     (f \oplus g)(x) =
     \begin{cases}
       q_0 & f(g(x)) = d \land g(x) \in F \\
-      f(g(x)) & \text{otherwise} 
+      g(x) & \text{otherwise} 
     \end{cases}
   \end{align*}
 \end{definition}
+\noindent This definition will make every possible final state become the initial state. This forgets the final state but it allows for the traversal to continue. The forgetfulness is not a problem this can be solved by looking at the previous endofunction. Using this and previous definitions can be put together to the following algorithm.
+
+\begin{algorithm}[Data-parallel Tokenization]\label{algo:token}
+  Given a total DFA with a dead state where $q_0 \notin F$ and a token function $\mathcal{T}: F \to T$. A string can be tokenized in $O(n)$ work and $O(\log n)$ span.
+  \begin{enumerate}
+    \item Let $s = [a_1, a_2, \dots, a_{n - 1}, a_n]$ be a string that will be tokenized then partially apply $\delta$ to every symbol. 
+    \begin{align*}
+      \mathbf{map} \: (\delta) \: s = x
+    \end{align*}
+    \item Make every endofunction safe for composition beside for the last endofunction.
+    \begin{align*}
+      \mathbf{map} \: (\oplus) \: (\mathbf{init} \:x) \: (\mathbf{tail} \: x) \doubleplus [\delta_n] = [\delta_1 \oplus \delta_2, \dots, \delta_{n - 1} \oplus \delta_n, \delta_n] = y
+    \end{align*}
+    \item Do a scan to get every composition.
+    \begin{align*}
+      \mathbf{scan} \: (\circ) \: id \: y = z
+    \end{align*}
+    \item Compute the actual state and determine weather it is an end state\footnote{If you were to also keep track of the index then the span of each token could also be found.}.
+    \begin{align*}
+      & \mathbf{let} \: f = \lambda i \to \\
+      & \quad \mathbf{let} \: s = \mathbf{if} \: i = 0 \: \mathbf{then} \: x[i](q_0) \: \mathbf{else} \: (z[i - 1] \circ x[i])(q_0) \\
+      & \quad \mathbf{in} \: (i = n - 1 \lor (z[i](q_0) = q_0 \land s \in F), s) \\
+      & \mathbf{in} \: \mathbf{map} \: f \: (\mathbf{iota} \: n)
+    \end{align*}
+    \item Remove every state that is not an ending state.
+    \begin{align*}
+      \mathbf{filter} \: (\lambda(b, s) \to b)
+    \end{align*}
+    \item Assert that every ending state is an accepting state.
+    \begin{align*}
+       (\mathbf{reduce} \: (\land)\: \mathbf{true}) \circ (\mathbf{map} \: (\lambda(b, s) \to s \in F))
+    \end{align*}
+    \item Produce the token sequence.
+    \begin{align*}
+      \mathbf{map} \: (\lambda(b, s) \to \mathcal{T}(s))
+    \end{align*}
+  \end{enumerate}
+\end{algorithm}
+
+\section{Implementation}
+\subsection{Tokenization}
 
 \section{Conclusion}
 Conclusion.
