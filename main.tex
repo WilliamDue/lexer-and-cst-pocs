@@ -199,7 +199,7 @@ For data-parallel tokenization we need to extent data-parallel algorithm \ref{al
     \end{cases}
   \end{align*}
 \end{definition}
-\noindent Now that we have a definition of a DFA where the dead state is known another problem is needed to be solved. The problem is as mentioned before that the traversal of the DFA has to be restarted if a dead state is reached after an accepting state. This done using the following binary operation.
+\noindent Now that we have a definition of a DFA where the dead state is known another problem is needed to be solved. The problem is as mentioned before that the traversal of the DFA has to be restarted if a dead state is reached after an accepting state. This is done using the following binary operation.
 
 \begin{definition}[Safe Composition]
   Given a DFA with two endofunctions $f = \delta(a)$ and $g = \delta(b)$. The operation $\oplus$ makes $f$ safe to compose such that it will continue traversing the DFA.
@@ -249,6 +249,7 @@ For data-parallel tokenization we need to extent data-parallel algorithm \ref{al
     \end{align*}
   \end{enumerate}
 \end{algorithm}
+\noindent The correctness of this algorithm can be established from in step 2. the accepting states will be mapped to the initial state. Then in step 3. a scan using composition would allow us to find the paths by evaluating each function at $q_0$. The path will be by the definition $\oplus$ such that the last state becomes the initial state in each path besides the last path.
 
 \section{Implementation}
 \subsection{Tokenization}
