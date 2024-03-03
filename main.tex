@@ -257,4 +257,72 @@ For data-parallel tokenization we need to extent data-parallel algorithm \ref{al
 \section{Conclusion}
 Conclusion.
 \printbibliography
+
+\section{I can't get this to work.}
+\begin{definition}[Safe Composition]
+  Given a DFA with two endofunctions $f = \delta(a)$ and $g = \delta(b)$. The operation $\oplus$ makes $f$ safe to compose such that it will continue traversing the DFA.
+  \begin{align*}
+    (f \oplus g)(x) =
+    \begin{cases}
+      q_0 & f(g(x)) = d \\
+      f(g(x)) & x \in Q
+    \end{cases}
+  \end{align*}
+\end{definition}
+\begin{proof}
+  It will be shown that safe composition is associative i.e.
+  \begin{align*}
+    ((f \oplus g) \oplus h )(x) = (f \oplus (g \oplus h))(x)
+  \end{align*}
+  By the definition of safe composition the left side is.
+  \begin{align*}
+    ((f \oplus g) \oplus h )(x) =
+    \begin{cases}
+      q_0 & (f \oplus g)(h(x)) = d \\
+      (f \oplus g)(h(x)) & x \in Q
+    \end{cases}
+  \end{align*}
+  By definition of $\oplus$ then we know $(f \oplus g)(h(x)) \neq d$ meaning we only need to consider the case resulting in $(f \oplus g)(h(x))$. By definition this is.
+  \begin{align*}
+    ((f \oplus g) \oplus h )(x) =
+    \begin{cases}
+      q_0 & f(g(h(x))) = d \\
+      f(g(h(x))) & x \in Q
+    \end{cases}
+  \end{align*}
+  Now we wish to show the right hand side can be simplified into the defintion of the left hand side. By definition of $\oplus$ the right hand side is.
+  \begin{align*}
+    (f \oplus (g \oplus h))(x) =
+    \begin{cases}
+      q_0 & f((g \oplus h)(x)) = d \\
+      f((g \oplus h)(x)) & x \in Q
+    \end{cases}
+  \end{align*}
+  We can expand the case resulting in $q_0$ given $f((g \oplus h)(x)) = d$, by definition there are only two cases of $(g \oplus h)(x)$ either it is equal to $d$ or not.
+  \begin{align*}
+    (f \oplus (g \oplus h))(x) =
+    \begin{cases}
+      q_0 & f(g(h(x))) = d \land g(h(x)) \neq d \\
+      q_0 & f(q_0) = d \land g(h(x)) = d \\
+      f((g \oplus h)(x)) & x \in Q
+    \end{cases}
+  \end{align*}
+  The two first cases can be simplified into the single predicate $f(g(h(x))) = d$. Since if $g(h(x)) = d$ then $f(g(h(x))) = d$ since all transitions from a dead state maps to itself by definition.
+  \begin{align*}
+    (f \oplus (g \oplus h))(x) =
+    \begin{cases}
+      q_0 & f(g(h(x))) = d \\
+      f((g \oplus h)(x)) & x \in Q
+    \end{cases}
+  \end{align*}
+  We can now expand the last case.
+  \begin{align*}
+    (f \oplus (g \oplus h))(x) =
+    \begin{cases}
+      f(q_0) & g(h(x)) = d \\
+      q_0 & f(g(h(x))) = d \\
+      f(g(h(x))) & x \in Q
+    \end{cases}
+  \end{align*}
+\end{proof}
 \end{document}
