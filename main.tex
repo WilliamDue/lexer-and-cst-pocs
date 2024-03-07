@@ -211,7 +211,8 @@ For data-parallel tokenization we need to extent data-parallel algorithm \ref{al
     \end{cases}
   \end{align*}
 \end{definition}
-\noindent This definition will make every possible final state become the initial state. This forgets the final state but it allows for the traversal to continue. The forgetfulness is not a problem this can be solved by looking at the previous endofunction. Using this and previous definitions can be put together to the following algorithm.
+\noindent This definition will make every possible final state become the initial state. This forgets the final state but it allows for the traversal to continue. The forgetfulness is not a problem this can be solved by looking at the previous endofunction.
+Using this and previous definitions can be put together to the following algorithm.
 
 \begin{algorithm}[Data-parallel Tokenization]\label{algo:token}
   Given a total DFA with a dead state where $q_0 \notin F$ and a token function $\mathcal{T}: F \to T$. A string can be tokenized in $O(n)$ work and $O(\log n)$ span.
@@ -239,9 +240,9 @@ For data-parallel tokenization we need to extent data-parallel algorithm \ref{al
     \begin{align*}
       \mathbf{filter} \: (\lambda(b, s) \to b)
     \end{align*}
-    \item Assert that every ending state is an accepting state.
+    \item Assert that the ending state is an accepting state.
     \begin{align*}
-       (\mathbf{reduce} \: (\land)\: \mathbf{true}) \circ (\mathbf{map} \: (\lambda(b, s) \to s \in F))
+       (\lambda(b, s) \to s \in F) \circ \mathbf{last}
     \end{align*}
     \item Produce the token sequence.
     \begin{align*}
@@ -249,80 +250,35 @@ For data-parallel tokenization we need to extent data-parallel algorithm \ref{al
     \end{align*}
   \end{enumerate}
 \end{algorithm}
-\noindent The correctness of this algorithm can be established from in step 2. the accepting states will be mapped to the initial state. Then in step 3. a scan using composition would allow us to find the paths by evaluating each function at $q_0$. The path will be by the definition $\oplus$ such that the last state becomes the initial state in each path besides the last path.
+\begin{proof}
+  We know in step 1-2. every endofunction is created we know at this point either it has the orignal state it would map to or it has the state $q_0$ depending on the predicate $\delta_{i + 1}(\delta_{i}(x)) = d \land g(x) \in F$ except for the last endofunction. At step 3. a prefix sum using function composition is computed of these endofunctions. Which by Algorithm \ref{algo:lex} can give us all states traversed in the DFA.
+  
+  Then at step 4. the paths taken in the DFA from state $q_0$ is found. We know for a given state $s$ in a path it will can be one of these cases.
+  \begin{itemize}
+    \item If $i = 0$ then $x[i](q_0)$ will be the first state visited after $q_0$ by definition of the transition function.
+    \item If $i \neq 0$ then $s$ will be $(z[i - 1] \circ x[i])(q_0)$. $z[i - 1](q_0)$ could wrongly map to $q_0$ by definition of safe composition.
+    \begin{itemize}
+      \item If $z[i - 1](q_0)$ maps wrongly to $q_0$ then the traversal of the DFA will be reset and $(z[i - 1] \circ x[i])(q_0)$ will map to the correct state of a new path.
+      \item If $z[i - 1](q_0)$ maps to the correct state then $(z[i - 1] \circ x[i])(q_0)$ will also map to the correct state.
+    \end{itemize}
+  \end{itemize}
+  It can be determined where each path ends by the followin predicate.
+  \begin{align*}
+    i = n - 1 \lor (z[i](q_0) = q_0 \land s \in F)
+  \end{align*}
+  We know if $i = n - 1$ then it must be the last state of the last path. The second case is if $z[i](q_0) = q_0$ and $s \in F$ holds. We know if $z[i](q_0) = q_0$ holds then it is possible a final state was mapped to $q_0$ by safe composition. And if $s \in F$ then since $q_0 \notin F$ we know $z[i](q_0) \neq s$ meaning the reason $z[i](q_0) = q_0$ must be because of a reset by safe composition.
 
+  Step 5-7. will first keep every last state by this predicate. Afterwards it is asserted that the last state $s \in F$. Only the last state of the last path is needed since all previous path would had been valid else it would had not been reset by safe composition. Finally just map every state to the token it has.
+\end{proof} 
+
+\begin{example}[Problem with this method]
+  
+\end{example}
 \section{Implementation}
 \subsection{Tokenization}
+\subsection{Tree Construction}
 
 \section{Conclusion}
 Conclusion.
 \printbibliography
-
-\section{I can't get this to work.}
-\begin{definition}[Safe Composition]
-  Given a DFA with two endofunctions $f = \delta(a)$ and $g = \delta(b)$. The operation $\oplus$ makes $f$ safe to compose such that it will continue traversing the DFA.
-  \begin{align*}
-    (f \oplus g)(x) =
-    \begin{cases}
-      q_0 & f(g(x)) = d \\
-      f(g(x)) & x \in Q
-    \end{cases}
-  \end{align*}
-\end{definition}
-\begin{proof}
-  It will be shown that safe composition is associative i.e.
-  \begin{align*}
-    ((f \oplus g) \oplus h )(x) = (f \oplus (g \oplus h))(x)
-  \end{align*}
-  By the definition of safe composition the left side is.
-  \begin{align*}
-    ((f \oplus g) \oplus h )(x) =
-    \begin{cases}
-      q_0 & (f \oplus g)(h(x)) = d \\
-      (f \oplus g)(h(x)) & x \in Q
-    \end{cases}
-  \end{align*}
-  By definition of $\oplus$ then we know $(f \oplus g)(h(x)) \neq d$ meaning we only need to consider the case resulting in $(f \oplus g)(h(x))$. By definition this is.
-  \begin{align*}
-    ((f \oplus g) \oplus h )(x) =
-    \begin{cases}
-      q_0 & f(g(h(x))) = d \\
-      f(g(h(x))) & x \in Q
-    \end{cases}
-  \end{align*}
-  Now we wish to show the right hand side can be simplified into the defintion of the left hand side. By definition of $\oplus$ the right hand side is.
-  \begin{align*}
-    (f \oplus (g \oplus h))(x) =
-    \begin{cases}
-      q_0 & f((g \oplus h)(x)) = d \\
-      f((g \oplus h)(x)) & x \in Q
-    \end{cases}
-  \end{align*}
-  We can expand the case resulting in $q_0$ given $f((g \oplus h)(x)) = d$, by definition there are only two cases of $(g \oplus h)(x)$ either it is equal to $d$ or not.
-  \begin{align*}
-    (f \oplus (g \oplus h))(x) =
-    \begin{cases}
-      q_0 & f(g(h(x))) = d \land g(h(x)) \neq d \\
-      q_0 & f(q_0) = d \land g(h(x)) = d \\
-      f((g \oplus h)(x)) & x \in Q
-    \end{cases}
-  \end{align*}
-  The two first cases can be simplified into the single predicate $f(g(h(x))) = d$. Since if $g(h(x)) = d$ then $f(g(h(x))) = d$ since all transitions from a dead state maps to itself by definition.
-  \begin{align*}
-    (f \oplus (g \oplus h))(x) =
-    \begin{cases}
-      q_0 & f(g(h(x))) = d \\
-      f((g \oplus h)(x)) & x \in Q
-    \end{cases}
-  \end{align*}
-  We can now expand the last case.
-  \begin{align*}
-    (f \oplus (g \oplus h))(x) =
-    \begin{cases}
-      f(q_0) & g(h(x)) = d \\
-      q_0 & f(g(h(x))) = d \\
-      f(g(h(x))) & x \in Q
-    \end{cases}
-  \end{align*}
-\end{proof}
 \end{document}
