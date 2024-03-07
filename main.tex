@@ -211,7 +211,7 @@ For data-parallel tokenization we need to extent data-parallel algorithm \ref{al
     \end{cases}
   \end{align*}
 \end{definition}
-\noindent This definition will make every possible final state become the initial state. This forgets the final state but it allows for the traversal to continue. The forgetfulness is not a problem this can be solved by looking at the previous endofunction.
+\noindent This definition will make every possible final state become the initial state. This forgets the final state but it allows for the traversal to continue. The forgetfulness is not a problem this can be solved by looking at the previous endofunction. This puts a limit on the lexer which is it only allows for going back to the previous state if a dead state is hit.
 Using this and previous definitions can be put together to the following algorithm.
 
 \begin{algorithm}[Data-parallel Tokenization]\label{algo:token}
