@@ -140,7 +140,7 @@ This allows for an alternative way of determining if a string can be produced by
 
 For the ability to use a data-parallel \texttt{map-reduce} we must have a monoidal structure. Here $\Delta$ is the set of all the composed partially applied $\delta$ functions needs to be closed under function composition.
 
-\begin{proposition}[DFA Composition Closure]
+\begin{proposition}[DFA Composition Closure]\label{prop:closure}
   Given a total then the set of endofunctions $\Delta: Q^Q$ will be closed under composition. The set $\Delta$ is the set $\Delta_i$ in the recurrence relation with the smallest $i$ such that $\Delta_i = \Delta_{i + 1}$.
   \begin{align*}
     \Delta_1 &= \{\delta(a) : a \in \Sigma \} \\
@@ -251,17 +251,19 @@ Using this and previous definitions can be put together to the following algorit
   \end{enumerate}
 \end{algorithm}
 \begin{proof}
-  We know in step 1-2. every endofunction is created we know at this point either it has the orignal state it would map to or it has the state $q_0$ depending on the predicate $\delta_{i + 1}(\delta_{i}(x)) = d \land g(x) \in F$ except for the last endofunction. At step 3. a prefix sum using function composition is computed of these endofunctions. Which by Algorithm \ref{algo:lex} can give us all states traversed in the DFA.
+  We know in step 1-2. every endofunction is created we know at this point either it has the orignal state it would map to or it has the state $q_0$ depending on the predicate $\delta_{i + 1}(\delta_{i}(x)) = d \land g(x) \in F$ except for the last endofunction. At step 3. a prefix sum using function composition is computed of these endofunctions.
   
-  Then at step 4. the paths taken in the DFA from state $q_0$ is found. We know for a given state $s$ in a path it will can be one of these cases.
+  Then at step 4. the paths taken in the DFA from state $q_0$ is found. We know for a given state $s$ in a path it will be equal to one of these cases.
   \begin{itemize}
     \item If $i = 0$ then $x[i](q_0)$ will be the first state visited after $q_0$ by definition of the transition function.
     \item If $i \neq 0$ then $s$ will be $(z[i - 1] \circ x[i])(q_0)$. $z[i - 1](q_0)$ could wrongly map to $q_0$ by definition of safe composition.
     \begin{itemize}
-      \item If $z[i - 1](q_0)$ maps wrongly to $q_0$ then the traversal of the DFA will be reset and $(z[i - 1] \circ x[i])(q_0)$ will map to the correct state of a new path.
+      \item If $z[i - 1](q_0)$ maps wrongly to $q_0$ then the traversal of the DFA will be reset and $(z[i - 1] \circ x[i])(q_0)$ will map to the correct state of a new path. This will be the first state after $q_0$ of the next path in the DFA.
       \item If $z[i - 1](q_0)$ maps to the correct state then $(z[i - 1] \circ x[i])(q_0)$ will also map to the correct state.
     \end{itemize}
   \end{itemize}
+  Therefore it is known that step 4. will produce the correct paths taken in the DFA.
+
   It can be determined where each path ends by the followin predicate.
   \begin{align*}
     i = n - 1 \lor (z[i](q_0) = q_0 \land s \in F)
@@ -272,10 +274,32 @@ Using this and previous definitions can be put together to the following algorit
 \end{proof} 
 
 \begin{example}[Problem with this method]
-  
+  If we had the following three patterns.
+  \begin{align*}
+    \tau_1 = a(a \qquad \tau_2 = a\text{+} \qquad \tau_3 = a)a
+  \end{align*}
+  Then the algorithm would not be ble to determine the tokens for the following input.
+  \begin{align*}
+    a(aaa)a
+  \end{align*}
+  The token sequence of this input could be determined to be $\tau_1, \tau_2, \tau_3$ with spans $(0, 3), (3, 4), (4, 7)$ if you reset at the last acceptings state. But since the algorithm resets at the last state from an accepting state then it fails. Meaning it would be able to recongnize $\tau_1$. The problem is at the token $\tau_2$ would get the span $(3, 5)$ and then the algorithm would not recongnize any token with the pattern $)a$.
 \end{example}
 \section{Implementation}
 \subsection{Tokenization}
+The implementation of tokenization is done by a variation of \ref{prop:closure}. We do not have to do fixed point iteration on alle of the endofunctions but only endofuctions that are neighbouring eachother. Then when you compose two transitions then you would need to add them as new transitions. So if you had the following pattern you wanted to match $abc$ then $a$ is a neighbor to $b$ and $b$ is a neighbor to $c$. So initially we have a set of endofunctions.
+\begin{align*}
+  \{\delta(a), \delta(b), \delta(c)\}
+\end{align*}
+Then we compose both $\delta(a)$ with $\delta(b)$ and $\delta(b)$ with $\delta(c)$ since both pairs are neighbouring transitions. Then the set of the new composition together with the old compositions results in the set.
+\begin{align*}
+  \{\delta(a), \delta(b), \delta(c)\} \cup \{\delta(a) \circ \delta(b), \delta(b) \circ \delta(c)\}
+\end{align*}
+Now $\delta(a) \circ \delta(b)$ is composed with $\delta(c)$ and $\delta(a)$ is composed with $\delta(b) \circ \delta(c)$. The set of these compositions are then unioned with the old set.
+\begin{align*}
+  \{\delta(a), \delta(b), \delta(c), \delta(a) \circ \delta(b), \delta(b) \circ \delta(c)\} \cup \{\delta(a) \circ \delta(b) \circ \delta(c)\}
+\end{align*}
+This ends up being the final set.
+
 \subsection{Tree Construction}
 
 \section{Conclusion}
