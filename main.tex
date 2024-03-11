@@ -331,8 +331,7 @@ This does not affect which grammars can be parsed. To show this is correct for L
   \end{gather*}
   Since $A_t$ only has a single production rule then it will always hold that $|\tau(A_t, s)| \leq 1$. Meaning the extended grammar $G'$ will also be a $\LL(k)$ grammar.
 \end{proof}
-
-Now the reason the grammar extension does not change which grammars can be parsed when it comes to LLP we need to look at the PSLS definition.
+\noindent Now to show that this extension does not change the grammars that can be parsed we need to be reminded of the PSLS definition.
 \begin{definition}{PSLS}
   Let $G = (N, T, P, S)$ be a context-free grammar. The function $\PSLS(x, y)$ for a pair of strings $x, y \in T^*$ is defined as follows:
   \begin{align*}
@@ -351,13 +350,13 @@ Now the reason the grammar extension does not change which grammars can be parse
   \end{align*}
   Where there only exists a single shortests prefix $\alpha$ of $B\gamma$ such that $(y, \alpha, ()) \vdash^* (y', \omega, \pi)$ where for any $a$ that may be in the second set we have $a = \alpha$.
 
-  Then for the extended grammar $G'$ then a derivation of the following form must also exists.
+  Then for the extended grammar $G'$ a derivation of the following form must also exists.
   \begin{align*}
     S' \Rightarrow^*_{lm} wu'A_tB'\gamma' \Rightarrow wxB'\gamma' \Rightarrow^* wxy\delta'
   \end{align*}
   Both of the leftmost derivations will have the common subderivation $wx$ since they still produce the same language and they both must produce $x$. 
 
-  We know $B\gamma$ and $B'\gamma'$ are both produced by leftmost derivations. If we have two leftmost derivations one from $G$ the other from $G$' with a common terminal string i.e. $S \Rightarrow^*_{lm} v\mu$ and $S' \Rightarrow^*_{lm} v\mu'$. Then we would know they only differ by the need to derive on $A_t$. Therefore there is a mapping of this kind of derivation from $G'$ to $G$ by substituting $A_t$ with its terminal $t$. So therefore $(B'\gamma')[t_1/A_{t_1}, \dots t_n/A_{t_n}] = B\gamma$ and we can also go the other way $B'\gamma' = (B\gamma)[A_{t_1}/t_1, \dots A_{t_n}/t_1]$. We can do this since any $A_t$ in $B'\gamma'$ would have not yet been derived due to it being a leftmost derivaiton. Since there is a one-to-one relation between derivations of $wxB'\gamma'$ and $wxB\gamma$ then there must also exist a single shortest prefix $\alpha'$ of some $B'\gamma'$ such that $(y, \alpha', ()) \vdash^* (y', \omega', \pi')$. Since if there were multiple different shortest prefixes of some $B'\gamma'$ then so would $B\gamma$. Since you could map the multiple $\alpha'$ to mutiple $\alpha$.
+  We know $B\gamma$ and $B'\gamma'$ are both produced by leftmost derivations. If we have two leftmost derivations one from $G$ the other from $G$' with a common terminal string i.e. $S \Rightarrow^*_{lm} vC\mu$ and $S' \Rightarrow^*_{lm} vC'\mu'$. Then we would know they only differ by the need to derive on $A_t$. Therefore there is a mapping of this kind of derivation from $G'$ to $G$ by substituting $A_t$ with its terminal $t$. So therefore $(B'\gamma')[t_1/A_{t_1}, \dots t_n/A_{t_n}] = B\gamma$ and we can also go the other way $B'\gamma' = (B\gamma)[A_{t_1}/t_1, \dots A_{t_n}/t_1]$. We can do this since any $A_t$ in $B'\gamma'$ would have not yet been derived due to it being a leftmost derivaiton seperated by a nonterminal. Since there is a one-to-one relation between derivations of $wxB'\gamma'$ and $wxB\gamma$ then there must also exist a single shortest prefix $\alpha'$ of some $B'\gamma'$ such that $(y, \alpha', ()) \vdash^* (y', \omega', \pi')$. Since if there were multiple different shortest prefixes of some $B'\gamma'$ then so would $B\gamma$. Since you could map the multiple $\alpha'$ to mutiple $\alpha$.
 
   If we are given an admissible pair $(x, y)$ where $|\PSLS(x, y)| = 1$ for some grammar $G$ and some derivation.
   \begin{align*}
