@@ -306,7 +306,7 @@ And we also create an secondary set of productions.
 \end{align*}
 Now we create a new set of productions by replacing every terminal in the right-hand side of a production by its corresponding nonterminal.
 \begin{align*}
-  P_r = \{A \to \delta[A_t/t] : A \to \delta \in P\}
+  P_r = \{A \to \delta[A_{t_1}/t_1, \dots A_{t_n}/t_1] : A \to \delta \in P\}
 \end{align*}
 The final grammar that will be used for parsing is now.
 \begin{align*}
@@ -321,7 +321,7 @@ This does not affect which grammars can be parsed. To show this is correct for L
   If for a given grammar it holds that $|\tau(A, s)| \leq 1$ for all $(A, s) \in N \times T^*$ then the grammar is $\LL(k)$.
 \end{definition}
 \begin{proof}
-  If we have a grammar $G$ that is $\LL(k)$. Then for a production $A \to \delta \in P$ and a production $A' \to \delta' \in P_r$ we have.
+  If we have a grammar $G$ that is $\LL(k)$. Then for a production $A \to \delta \in P$ and its corresponding production $A \to \delta[A_{t_1}/t_1, \dots A_{t_n}/t_1] = A' \to \delta' \in P_r$ we have.
   \begin{align*}
     \FIRST_k(\delta) \truncprod{k} \FOLLOW_k(A) = \FIRST_k(\delta') \truncprod{k} \FOLLOW_k(A')
   \end{align*}
