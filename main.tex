@@ -401,21 +401,31 @@ Now the reason the grammar extension does not change which grammars can be parse
   \cup \: \{ & a : \exists S \Rightarrow^* wuA\beta \Rightarrow wxa\gamma \Rightarrow^* wxy\delta, \\
   & a = \text{FIRST}_1(y), w,u \in T^*, \beta, \gamma, \delta \in (N \cup T)^*, u \neq x \}
 \end{align*}
-If we are given an admissible pair $(x, y)$ where $|PSLS(x, y)| = 1$ for some grammar $G$ and some derivation.
+If we are given an admissible pair $(x, y)$ where $|\PSLS(x, y)| = 1$ for some grammar $G$ and some derivation.
 \begin{align*}
   S \Rightarrow^*_{lm} wuA\beta \Rightarrow wxB\gamma \Rightarrow^* wxy\delta
 \end{align*}
-Where there only exists a single shortests prefix $\alpha$ of $B\gamma$ such that $(y, \alpha, ()) \vdash^* (y', \omega, \pi)$ where $\alpha$ may equal $a$.
+Where there only exists a single shortests prefix $\alpha$ of $B\gamma$ such that $(y, \alpha, ()) \vdash^* (y', \omega, \pi)$ where $\alpha$ may equal some $a$.
 
-Then for the extended grammar $G'$ then the following derivation also exists.
+Then for the extended grammar $G'$ then a derivation of the following form must also exists.
 \begin{align*}
-  S' \Rightarrow^*_{lm} wu'A_xB'\gamma' \Rightarrow wxB'\gamma' \Rightarrow^* wxy\delta'
+  S' \Rightarrow^*_{lm} wu'A_tB'\gamma' \Rightarrow wxB'\gamma' \Rightarrow^* wxy\delta'
 \end{align*}
-Both of the leftmost derivations will have the common sub derivation $wx$ since they still produce the same language. 
+Both of the leftmost derivations will have the common subderivation $wx$ since they still produce the same language and they both must produce $x$. 
 
-We know $B\gamma$ and $B'\gamma'$ are both produced by leftmost derivations. We also know a leftmost derivation in $G'$ only differs from $G$ by not the need to derive on $A_t$. Therefore substituting $A_t$ with its terminal $t$ would then result in the derivations being the same. So therefore $(B'\gamma')[t_1/A_{t_1}, \dots t_n/A_{t_n}] = B\gamma$. In the case of $\delta'$ here we can just let $\delta'$ be such that $\delta'[t_1/A_{t_1}, \dots t_n/A_{t_n}] = \delta$.
+We know $B\gamma$ and $B'\gamma'$ are both produced by leftmost derivations. If we have two leftmost derivations from each grammar with a common terminal string i.e. $S \Rightarrow^*_{lm} v\mu$ and $S' \Rightarrow^*_{lm} v\mu'$. Then we would know they only differ by the need to derive on $A_t$. Therefore substituting $A_t$ with its terminal $t$ one could map a derivation in $G'$ to $G$. So therefore $(B'\gamma')[t_1/A_{t_1}, \dots t_n/A_{t_n}] = B\gamma$ and we can also go the other way $B'\gamma' = (B\gamma)[A_{t_1}/t_1, \dots A_{t_n}/t_1]$. Since there is a one-to-one relation between derivations of $wxB'\gamma'$ and $wxB\gamma$ then there must also exists a single shortest prefix $\alpha'$ of $B'\gamma'$ such that $(y, \alpha', ()) \vdash^* (y', \omega', \pi')$. Since if $B'\gamma'$ had multiple valid $\alpha'$ then so would $B\gamma$.
 
-By the assumption we now know there only exists a single shortest prefix $\alpha$ of $B\gamma$ such that $(y, \alpha, ()) \vdash^* (y', \omega, \pi)$.
+If we are given an admissible pair $(x, y)$ where $|\PSLS(x, y)| = 1$ for some grammar $G$ and some derivation.
+\begin{align*}
+  S \Rightarrow^* wuA\beta \Rightarrow wxa\gamma \Rightarrow^* wxy\delta
+\end{align*}
+Where there only exists a single $a = \text{FIRST}_1(y)$ where $\alpha$ may equal some $\alpha$.
+
+Then for the extended grammar $G'$ then a derivation of the following form must also exists.
+\begin{align*}
+  S' \Rightarrow^*_{lm} wu'A_tB_a'\gamma' \Rightarrow wxB_a'\gamma' \Rightarrow^* wxy\delta'
+\end{align*}
+Once again we can reuse the same argumet as before that there is a one-to-one relation between the derivations in $G$ and $G'$ i.e. $(B_a'\gamma')[t_1/A_{t_1}, \dots t_n/A_{t_n}] = a\gamma$ and $B_a'\gamma' = (a\gamma)[A_{t_1}/t_1, \dots A_{t_n}/t_1]$.
 
 \begin{gather*}
   [E_1, T_4, A_a, E_2', A_+, T_5, A_[, E_1, T_4, A_a, E_2', A_+, T_4, A_a, E_3', A_], E_3']
