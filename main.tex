@@ -325,9 +325,9 @@ This does not affect which grammars can be parsed. To show this is correct for L
   \begin{align*}
     \FIRST^G_k(\delta) \truncprod{k} \FOLLOW^G_k(A) = \FIRST^{G'}_k(\delta') \truncprod{k} \FOLLOW^{G'}_k(A)
   \end{align*}
-  Since the first and follow-sets are unchanged for productions in $P_r$ because all added nonterminals directly becomes their corresponding terminals in a derivation. Therefore none of these productions leads to a table conflict. Then for a production $A_T \to t \in P_T$ we have.
+  Since the first and follow-sets are unchanged for productions in $P_r$ because all added nonterminals directly becomes their corresponding terminals in a derivation. Therefore none of these productions leads to a table conflict. Then for a production $A_t \to t \in P_T$ we have.
   \begin{gather*}
-    i \in \tau(A_t, s) \text{ where } s \in \FIRST^{G'}_k(t) \truncprod{k} \FOLLOW^{G'}_k(A_T)
+    i \in \tau(A_t, s) \text{ where } s \in \FIRST^{G'}_k(t) \truncprod{k} \FOLLOW^{G'}_k(A_t)
   \end{gather*}
   Since $A_t$ only has a single production rule then it will always hold that $|\tau(A_t, s)| \leq 1$. Meaning the extended grammar $G'$ will also be a $\LL(k)$ grammar.
 \end{proof}
@@ -344,7 +344,7 @@ This does not affect which grammars can be parsed. To show this is correct for L
   \end{align*}
 \end{definition}
 \begin{proof}
-  If we are given an admissible pair $(x, y)$ where $|\PSLS(x, y)| = 1$ for some grammar $G$ and some derivation.
+  If we are given an admissible pair $(x, y)$ where $|\PSLS(x, y)| = 1$ for some LL grammar $G$ and some derivation.
   \begin{align*}
     S \Rightarrow^*_{lm} wuA\beta \Rightarrow wxB\gamma \Rightarrow^* wxy\delta
   \end{align*}
@@ -356,7 +356,7 @@ This does not affect which grammars can be parsed. To show this is correct for L
   \end{align*}
   Both of the leftmost derivations will have the common subderivation $wx$ since they still produce the same language and they both must produce $x$. 
 
-  We know $B\gamma$ and $B'\gamma'$ are both produced by leftmost derivations. If we have two leftmost derivations one from $G$ the other from $G$' with a common terminal string i.e. $S \Rightarrow^*_{lm} vC\mu$ and $S' \Rightarrow^*_{lm} vC'\mu'$. Then we would know they only differ by the need to derive on $A_t$. Therefore there is a mapping of this kind of derivation from $G'$ to $G$ by substituting $A_t$ with its terminal $t$. So therefore $(B'\gamma')[t_1/A_{t_1}, \dots t_n/A_{t_n}] = B\gamma$ and we can also go the other way $B'\gamma' = (B\gamma)[A_{t_1}/t_1, \dots A_{t_n}/t_1]$. We can do this since any $A_t$ in $B'\gamma'$ would have not yet been derived due to it being a leftmost derivaiton seperated by a nonterminal. Since there is a one-to-one relation between derivations of $wxB'\gamma'$ and $wxB\gamma$ then there must also exist a single shortest prefix $\alpha'$ of some $B'\gamma'$ such that $(y, \alpha', ()) \vdash^* (y', \omega', \pi')$. Since if there were multiple different shortest prefixes of some $B'\gamma'$ then so would $B\gamma$. Since you could map the multiple $\alpha'$ to mutiple $\alpha$.
+  We know $B\gamma$ and $B'\gamma'$ are both produced by leftmost derivations. If we have two leftmost derivations one from $G$ the other from $G$' with a common terminal string i.e. $S \Rightarrow^*_{lm} vC\mu$ and $S' \Rightarrow^*_{lm} vC'\mu'$. Then we would know they only differ by the need to derive on $A_t$. Since both $G$ and $G'$ are both LL grammars so there are not multiple ways of deriving $v$ so the same production sequence is used but $G'$ has the added $A_t$ productions. Therefore there is a mapping of this kind of derivation from $G'$ to $G$ by substituting $A_t$ with its terminal $t$. So therefore $(B'\gamma')[t_1/A_{t_1}, \dots t_n/A_{t_n}] = B\gamma$ and we can also go the other way $B'\gamma' = (B\gamma)[A_{t_1}/t_1, \dots A_{t_n}/t_1]$. We can do this since any $A_t$ in $B'\gamma'$ would have not yet been derived due to it being a leftmost derivaiton seperated by a nonterminal. Since there is a one-to-one relation between derivations of $wxB'\gamma'$ and $wxB\gamma$ then there must also exist a single shortest prefix $\alpha'$ of some $B'\gamma'$ such that $(y, \alpha', ()) \vdash^* (y', \omega', \pi')$. Since if there were multiple different shortest prefixes of some $B'\gamma'$ then so would $B\gamma$. Since you could map the multiple $\alpha'$ to mutiple $\alpha$.
 
   If we are given an admissible pair $(x, y)$ where $|\PSLS(x, y)| = 1$ for some grammar $G$ and some derivation.
   \begin{align*}
