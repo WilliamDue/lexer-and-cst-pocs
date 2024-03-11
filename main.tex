@@ -294,6 +294,84 @@ Using this and previous definitions can be put together to the following algorit
   \end{align*}
   The token sequence of this input could be determined to be $\tau_1, \tau_2, \tau_3$ with spans $(0, 3), (3, 4), (4, 7)$ if you reset at the last acceptings state. But since the algorithm resets at the last state from an accepting state then it fails. Meaning it would be able to recongnize $\tau_1$. The problem is at the token $\tau_2$ would get the span $(3, 5)$ and then the algorithm would not recongnize any token with the pattern $)a$.
 \end{example}
+
+\subsection{Grammar Extension for Syntax Trees}
+The way we will extended the grammar is by adding productions that can be uniquely be related to the terminals. We wish to do so such that when producing a production sequence then its terminals will show up in its production sequence. This can then be use when constructing the syntax tree. To do this extension we start by creating a secondary set of nonterminals.
+\begin{align*}
+  N_{T} = \{A_t : t \in T\}, \text{ where } A_t \notin N \text{ for any } t \in T
+\end{align*}
+And we also create an secondary set of productions.
+\begin{align*}
+  P_{T} = \{A_t \to t : t \in T\}, \text{ where } A_t \to t \notin P \text{ for any } t \in T
+\end{align*}
+Now we create a new set of productions by replacing every terminal in the right-hand side of a production by its corresponding nonterminal.
+\begin{align*}
+  P_r = \{A \to \delta[A_t/t] : A \to \delta \in P\}
+\end{align*}
+The final grammar that will be used for parsing is now.
+\begin{align*}
+  G' = (N', T', P', S') = (N \cup N_T, T, P_r \cup P_T, S)
+\end{align*}
+This does not affect which grammars can be parsed. To show this is correct for LLP parsing we first will need to show it is correct for LL parsing. The definition of a $\LL(k)$\footnote{This exact definition was found in my Bachelor thesis.} parsing table is as followed.
+\begin{definition}[$\LL(k)$ table]
+  Let $G = (N, T, P, S)$ be a $\LL(k)$ context-free grammar and $\tau : N \times T^* \to \mathbb{P}(\mathbb{N})$ denote the $\LL(k)$ table. For a given production $A \to \delta = p_i \in P$ where $i \in \{0, ..., |P| - 1\}$ is a unique index.
+  \begin{gather*}
+      i \in \tau(A, s) \text{ where } s \in \FIRST_k(\delta) \truncprod{k} \FOLLOW_k(A)
+  \end{gather*}
+  If for a given grammar it holds that $|\tau(A, s)| \leq 1$ for all $(A, s) \in N \times T^*$ then the grammar is $\LL(k)$.
+\end{definition}
+\begin{proof}
+  If we have a grammar $G$ that is $\LL(k)$. Then for a production $A \to \delta \in P$ and a production $A' \to \delta' \in P_r$ we have.
+  \begin{align*}
+    \FIRST_k(\delta) \truncprod{k} \FOLLOW_k(A) = \FIRST_k(\delta') \truncprod{k} \FOLLOW_k(A')
+  \end{align*}
+  Since the first and follow-sets are unchanged for productions in $P_r$ because all added nonterminals directly becomes their corresponding terminals in a derivation. Therefore none of these productions leads to a table conflict. Then for a production $A_T \to t \in P_T$ we have.
+  \begin{gather*}
+    i \in \tau(A_t, s) \text{ where } s \in \FIRST_k(t) \truncprod{k} \FOLLOW_k(A_T)
+  \end{gather*}
+  Since $A_t$ only has a single production rule then it will always hold that $|\tau(A_t, s)| \leq 1$. Meaning the extended grammar $G'$ will also be a $\LL(k)$ grammar.
+\end{proof}
+
+Now the reason the grammar extension does not change which grammars can be parsed when it comes to LLP we need to look at the PSLS definition.
+\begin{definition}{PSLS}
+  Let $G = (N, T, P, S)$ be a context-free grammar. The function $\PSLS(x, y)$ for a pair of strings $x, y \in T^*$ is defined as follows:
+  \begin{align*}
+    \text{PSLS}(x, y) = \{ & \alpha : \exists S \Rightarrow^*_{lm} wuA\beta \Rightarrow wxB\gamma \Rightarrow^* wxy\delta, \\
+    & w, u, y' \in T^*, a \in T, A, B \in N, \alpha, \beta, \gamma, \delta \in (N \cup T)^*, u \neq x, \\
+    & y = ay', \alpha \text{ is the shortest prefix of } B\gamma \\ 
+    & \text{ such that } (y, \alpha, ()) \vdash^* (y', \omega, \pi)\} \\
+    \cup \: \{ & a : \exists S \Rightarrow^* wuA\beta \Rightarrow wxa\gamma \Rightarrow^* wxy\delta, \\
+    & a = \text{FIRST}_1(y), w,u \in T^*, \beta, \gamma, \delta \in (N \cup T)^*, u \neq x \}
+  \end{align*}
+\end{definition}
+\begin{proof}
+  If we are given an admissible pair $(x, y)$ where $|\PSLS(x, y)| = 1$ for some grammar $G$ and some derivation.
+  \begin{align*}
+    S \Rightarrow^*_{lm} wuA\beta \Rightarrow wxB\gamma \Rightarrow^* wxy\delta
+  \end{align*}
+  Where there only exists a single shortests prefix $\alpha$ of $B\gamma$ such that $(y, \alpha, ()) \vdash^* (y', \omega, \pi)$ where for any $a$ that may be in the second set we have $a = \alpha$.
+
+  Then for the extended grammar $G'$ then a derivation of the following form must also exists.
+  \begin{align*}
+    S' \Rightarrow^*_{lm} wu'A_tB'\gamma' \Rightarrow wxB'\gamma' \Rightarrow^* wxy\delta'
+  \end{align*}
+  Both of the leftmost derivations will have the common subderivation $wx$ since they still produce the same language and they both must produce $x$. 
+
+  We know $B\gamma$ and $B'\gamma'$ are both produced by leftmost derivations. If we have two leftmost derivations one from $G$ the other from $G$' with a common terminal string i.e. $S \Rightarrow^*_{lm} v\mu$ and $S' \Rightarrow^*_{lm} v\mu'$. Then we would know they only differ by the need to derive on $A_t$. Therefore there is a mapping of this kind of derivation from $G'$ to $G$ by substituting $A_t$ with its terminal $t$. So therefore $(B'\gamma')[t_1/A_{t_1}, \dots t_n/A_{t_n}] = B\gamma$ and we can also go the other way $B'\gamma' = (B\gamma)[A_{t_1}/t_1, \dots A_{t_n}/t_1]$. We can do this since any $A_t$ in $B'\gamma'$ would have not yet been derived due to it being a leftmost derivaiton. Since there is a one-to-one relation between derivations of $wxB'\gamma'$ and $wxB\gamma$ then there must also exists a single shortest prefix $\alpha'$ of some $B'\gamma'$ such that $(y, \alpha', ()) \vdash^* (y', \omega', \pi')$. Since if there were multiple different shortest prefixes of some $B'\gamma'$ then so would $B\gamma$. Since you could map the multiple $\alpha'$ to mutiple $\alpha$.
+
+  If we are given an admissible pair $(x, y)$ where $|\PSLS(x, y)| = 1$ for some grammar $G$ and some derivation.
+  \begin{align*}
+    S \Rightarrow^* wuA\beta \Rightarrow wxa\gamma \Rightarrow^* wxy\delta
+  \end{align*}
+  Where there only exists a single $a = \text{FIRST}_1(y)$  where for any $\alpha$ that may be in the first set we have $a = \alpha$.
+
+  Then for the extended grammar $G'$ then a derivation of the following form must also exists.
+  \begin{align*}
+    S' \Rightarrow^*_{lm} wu'A_tB_a'\gamma' \Rightarrow wxB_a'\gamma' \Rightarrow^* wxy\delta'
+  \end{align*}
+  Once again we can use the same argumet, that there is a mapping between a leftmost derivations in $G$ and in $G'$ i.e. $(B_a'\gamma')[t_1/A_{t_1}, \dots t_n/A_{t_n}] = a\gamma$ and $B_a'\gamma' = (a\gamma)[A_{t_1}/t_1, \dots A_{t_n}/t_1]$. Therefore there is a one-to-one mapping between these two derivations. We know $B_a' \Rightarrow a$ so there must only exists a single $a = \text{FIRST}_1(B_a')$ for this form of derivation. We would now need to show that this $B_a'$ would exists in the first set of the PSLS definition since it cannot exist in the second set. We see from the derivation of is of the same of as the kind of derivation for the first set. We see the shortest prefix $\alpha'$ of $B_a'\gamma'$ such that $(y, \alpha', ()) \vdash^* (y', \omega', \pi')$ is $B_a'$. So $\alpha' = B_a'$.
+\end{proof}
+
 \section{Implementation}
 \subsection{Tokenization}
 The implementation of tokenization is done by a variation of \ref{prop:closure}. We do not have to do fixed point iteration on alle of the endofunctions but only endofuctions that are neighbouring eachother. Then when you compose two transitions then you would need to add them as new transitions. So if you had the following pattern you wanted to match $abc$ then $a$ is a neighbor to $b$ and $b$ is a neighbor to $c$. So initially we have a set of endofunctions.
@@ -358,75 +436,7 @@ The first problem to tackle is terminals are not included in the left parse retu
 \begin{gather*}
   [E_1, T_4, E_2', T_5, E_1, T_4, E_2', T_4, E_3', E_3']
 \end{gather*}
-This problem can be solved by extending a given grammar $(N, T, P, s)$ where $N$ is the set of nonterminalsm, $T$ is the set of terminals, $P$ is the set of productions, and $S$ is the initial nonterminal. The way we will extended the grammar is by adding productions that can be uniquely be related to the terminals. To do this extension we start by creating a secondary set of nonterminals.
-\begin{align*}
-  N_{T} = \{A_t : t \in T\}, \text{ where } A_t \notin N \text{ for any } t \in T
-\end{align*}
-And we also create an secondary set of productions.
-\begin{align*}
-  P_{T} = \{A_t \to t : t \in T\}, \text{ where } A_t \to t \notin P \text{ for any } t \in T
-\end{align*}
-Now we create a new set of productions by replacing every terminal in the right-hand side of a production by its corresponding nonterminal.
-\begin{align*}
-  P_r = \{A \to \delta[A_t/t] : A \to \delta \in P\}
-\end{align*}
-The final grammar that will be used for parsing is now.
-\begin{align*}
-  G' = (N', T', P', S') = (N \cup N_T, T, P_r \cup P_T, S)
-\end{align*}
-This does not affect which grammars can be parsed. To show this is correct for LLP parsing we first will need to show it is correct for LL parsing. The definition of a $\LL(k)$\footnote{This exact definition was found in my Bachelor thesis.} parsing table is as followed.
-\begin{definition}[$\LL(k)$ table]
-  Let $G = (N, T, P, S)$ be a $\LL(k)$ context-free grammar and $\tau : N \times T^* \to \mathbb{P}(\mathbb{N})$ denote the $\LL(k)$ table. For a given production $A \to \delta = p_i \in P$ where $i \in \{0, ..., |P| - 1\}$ is a unique index.
-  \begin{gather*}
-      i \in \tau(A, s) \text{ where } s \in \FIRST_k(\delta) \truncprod{k} \FOLLOW_k(A)
-  \end{gather*}
-  If for a given grammar it holds that $|\tau(A, s)| \leq 1$ for all $(A, s) \in N \times T^*$ then the grammar is $\LL(k)$.
-\end{definition}
-\noindent The reason for this not changing which grammars can be parse is if we have a grammar that is $\LL(k)$. Then for a production $A \to \delta \in P$ and a production $A' \to \delta' \in P_r$ we have.
-\begin{align*}
-  \FIRST_k(\delta) \truncprod{k} \FOLLOW_k(A) = \FIRST_k(\delta') \truncprod{k} \FOLLOW_k(A')
-\end{align*}
-Since the first and follow-sets are unchanged for productions in $P_r$ because all added nonterminals directly becomes their corresponding terminals in a derivation. Therefore none of these productions leads to a table conflict. Then for a production $A_T \to t \in P_T$ we have.
-\begin{gather*}
-  i \in \tau(A_t, s) \text{ where } s \in \FIRST_k(t) \truncprod{k} \FOLLOW_k(A_T)
-\end{gather*}
-Since $A_t$ only has a single production rule then it will always hold that $|\tau(A_t, s)| \leq 1$. Meaning the extended grammar $G'$ will also be a $\LL(k)$ grammar.
-
-Now the reason the grammar extension does not change which grammars can be parsed when it comes to LLP we need to look at the PSLS definition.
-\begin{align*}
-  \text{PSLS}(x, y) = \{ & \alpha : \exists S \Rightarrow^*_{lm} wuA\beta \Rightarrow wxB\gamma \Rightarrow^* wxy\delta, \\
-  & w, u, y' \in T^*, a \in T, A, B \in N, \alpha, \beta, \gamma, \delta \in (N \cup T)^*, u \neq x, \\
-  & y = ay', \alpha \text{ is the shortest prefix of } B\gamma \\ 
-  & \text{ such that } (y, \alpha, ()) \vdash^* (y', \omega, \pi)\} \\
-  \cup \: \{ & a : \exists S \Rightarrow^* wuA\beta \Rightarrow wxa\gamma \Rightarrow^* wxy\delta, \\
-  & a = \text{FIRST}_1(y), w,u \in T^*, \beta, \gamma, \delta \in (N \cup T)^*, u \neq x \}
-\end{align*}
-If we are given an admissible pair $(x, y)$ where $|\PSLS(x, y)| = 1$ for some grammar $G$ and some derivation.
-\begin{align*}
-  S \Rightarrow^*_{lm} wuA\beta \Rightarrow wxB\gamma \Rightarrow^* wxy\delta
-\end{align*}
-Where there only exists a single shortests prefix $\alpha$ of $B\gamma$ such that $(y, \alpha, ()) \vdash^* (y', \omega, \pi)$ where $\alpha$ may equal some $a$.
-
-Then for the extended grammar $G'$ then a derivation of the following form must also exists.
-\begin{align*}
-  S' \Rightarrow^*_{lm} wu'A_tB'\gamma' \Rightarrow wxB'\gamma' \Rightarrow^* wxy\delta'
-\end{align*}
-Both of the leftmost derivations will have the common subderivation $wx$ since they still produce the same language and they both must produce $x$. 
-
-We know $B\gamma$ and $B'\gamma'$ are both produced by leftmost derivations. If we have two leftmost derivations from each grammar with a common terminal string i.e. $S \Rightarrow^*_{lm} v\mu$ and $S' \Rightarrow^*_{lm} v\mu'$. Then we would know they only differ by the need to derive on $A_t$. Therefore substituting $A_t$ with its terminal $t$ one could map a derivation in $G'$ to $G$. So therefore $(B'\gamma')[t_1/A_{t_1}, \dots t_n/A_{t_n}] = B\gamma$ and we can also go the other way $B'\gamma' = (B\gamma)[A_{t_1}/t_1, \dots A_{t_n}/t_1]$. Since there is a one-to-one relation between derivations of $wxB'\gamma'$ and $wxB\gamma$ then there must also exists a single shortest prefix $\alpha'$ of $B'\gamma'$ such that $(y, \alpha', ()) \vdash^* (y', \omega', \pi')$. Since if $B'\gamma'$ had multiple valid $\alpha'$ then so would $B\gamma$.
-
-If we are given an admissible pair $(x, y)$ where $|\PSLS(x, y)| = 1$ for some grammar $G$ and some derivation.
-\begin{align*}
-  S \Rightarrow^* wuA\beta \Rightarrow wxa\gamma \Rightarrow^* wxy\delta
-\end{align*}
-Where there only exists a single $a = \text{FIRST}_1(y)$ where $\alpha$ may equal some $\alpha$.
-
-Then for the extended grammar $G'$ then a derivation of the following form must also exists.
-\begin{align*}
-  S' \Rightarrow^*_{lm} wu'A_tB_a'\gamma' \Rightarrow wxB_a'\gamma' \Rightarrow^* wxy\delta'
-\end{align*}
-Once again we can reuse the same argumet as before that there is a one-to-one relation between the derivations in $G$ and $G'$ i.e. $(B_a'\gamma')[t_1/A_{t_1}, \dots t_n/A_{t_n}] = a\gamma$ and $B_a'\gamma' = (a\gamma)[A_{t_1}/t_1, \dots A_{t_n}/t_1]$.
-
+This problem can be solved by extending a given grammar $(N, T, P, s)$ where $N$ is the set of nonterminalsm, $T$ is the set of terminals, $P$ is the set of productions, and $S$ is the initial nonterminal.
 \begin{gather*}
   [E_1, T_4, A_a, E_2', A_+, T_5, A_[, E_1, T_4, A_a, E_2', A_+, T_4, A_a, E_3', A_], E_3']
 \end{gather*}
