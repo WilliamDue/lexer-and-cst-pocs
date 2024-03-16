@@ -109,11 +109,13 @@
 \maketitle
 \thispagestyle{firstpage}
 \begin{abstract}
-    Abstract.
+    A detailed 
 \end{abstract}
 
+\tableofcontents
+
 \section{Introduction}
-Introduction.
+
 
 \section{Theory}
 Hills paper ``Parallel lexical analysis and parsing on the AMT
@@ -121,6 +123,7 @@ distributed array processor'' \cite{HILL1992699} describes a method to obtain th
 
 % I should probably mention that pareas also uses this paper and does tokenization but I have no idea how they do it.
 \subsection{Data-parallel Lexical Analysis}
+\subsubsection{Data-parallel DFA Traversal}
 To explain the theory of parallel lexical analysis we first remind the reader of the definition of a deterministic finite automaton.
 \begin{definition}[DFA]
   A deterministic finite automata \cite{10.5555/1196416} \cite{enwiki:1192025610} is given by a 5-tuple $(Q, \Sigma, \delta, q_0, F)$ where.
@@ -172,7 +175,7 @@ For the ability to use a data-parallel \texttt{map-reduce} we must have a monoid
 
   By the induction hypothesis $\Delta_{i + 1}$ must contain every sequence of length $i$ or less due to $\Delta_i \subseteq \Delta_{i + 1}$. It remains to show that every sequence of length $i + 1$ is a member of $\Delta_{i + 1}$. It is known that a direct product of $\Delta_i$ is used in the definition of $\Delta_{i + 1}$ so $\{f \circ g : f, g \in \Delta_i\} \subseteq \Delta_{i + 1}$. A direct product between sequences of length $1$ and $i$ will create every sequence of length $i + 1$ and therefore every sequence of length $i + 1$ is a member of $\Delta_{i + 1}$. Thereby $\Delta$ is closed under composition.
 \end{proof}
-\noindent Now since $\Delta$ is closed under an arbitrary binary associative operations then it follows that $\Delta$ and function composition induces a monoidal structure.
+\noindent Now since $\Delta$ is closed under composition then it follows that $\Delta$ and function composition induces a monoidal structure.
 
 \begin{corollary}[DFA Composition Monoid]
   DFA composition closure induces a semigroup which in turn induces the monoid $(\Delta \cup \{id\}, \circ)$ where $id: Q \to Q$ and $id(q) = q$.
@@ -192,7 +195,7 @@ For the ability to use a data-parallel \texttt{map-reduce} we must have a monoid
   \end{enumerate}
 \end{algorithm}
 
-\subsection{Data-parallel Tokenization}
+\subsubsection{Data-parallel Tokenization}
 For data-parallel tokenization we need to extent data-parallel algorithm \ref{algo:lex} will be needed to be extended. The idea will be to use a data-parallel \texttt{map-scan} instead since it will gives all the states. This is also the methods described in Hills \cite{HILL1992699} paper. The problem is we need to be able to recongnize the longest strech of symbols that results in a token. And we also need to restart the traversal of DFA if a final state is hit while no options to traverse further. To do so we first need af function to define a function to recongnize tokens.
 
 \begin{definition}[Token Function]
@@ -260,28 +263,26 @@ Using this and previous definitions can be put together to the following algorit
     \end{align*}
   \end{enumerate}
 \end{algorithm}
-\begin{proof}
-  We wish to show that the algorithm produces an array of paths where each path starts in $q_0$ and is not included in the path. Knowing where these paths ends it can then be trivially used to construct the token sequence using the token function $\mathcal{T}$. We will also show that it can be correctly determine wether the DFA paths taken are correct.
+\noindent We will give an explanation of why the algorithm produces an array of paths where each path starts in $q_0$ and is not included in the path. Knowing where these paths ends it can then be trivially used to construct the token sequence using the token function $\mathcal{T}$. We will also show that it can be correctly determine wether the DFA paths taken are correct.
 
-  We know in step 1-2. every endofunction is created and we know at this point either it maps to some orignal states or some maps to $q_0$ because of safe composition. At step 3. a prefix sum using function composition is computed of these endofunctions. Which by Algorithm \ref{algo:lex} can give us all states traversed in the DFA. But due to safe composition $\oplus$ is used then an accepting state followed by an dead states will become the initial state $q_0$. This almost gives all the paths, since now when a final state in a path is reach it becomes the initial state and the traversal i restarted.
+We know in step 1-2. every endofunction is created and we know at this point either it maps to some orignal states or some maps to $q_0$ because of safe composition. At step 3. a prefix sum using function composition is computed of these endofunctions. Which by Algorithm \ref{algo:lex} can give us all states traversed in the DFA. But due to safe composition $\oplus$ is used then an accepting state followed by an dead states will become the initial state $q_0$. This almost gives all the paths, since now when a final state in a path is reach it becomes the initial state and the traversal i restarted.
 
-  Then at step 4. the paths taken in the DFA from state $q_0$ is found. We know for a given state $s$ in a path it will can be one of these cases.
+Then at step 4. the paths taken in the DFA from state $q_0$ is found. We know for a given state $s$ in a path it will can be one of these cases.
+\begin{itemize}
+  \item If $i = 0$ then $x[i](q_0)$ will be the first state visited after $q_0$ by definition of the transition function.
+  \item If $i \neq 0$ then $s$ will be $(z[i - 1] \circ x[i])(q_0)$. $z[i - 1](q_0)$ could wrongly map to $q_0$ by definition of safe composition.
   \begin{itemize}
-    \item If $i = 0$ then $x[i](q_0)$ will be the first state visited after $q_0$ by definition of the transition function.
-    \item If $i \neq 0$ then $s$ will be $(z[i - 1] \circ x[i])(q_0)$. $z[i - 1](q_0)$ could wrongly map to $q_0$ by definition of safe composition.
-    \begin{itemize}
-      \item If $z[i - 1](q_0)$ maps wrongly to $q_0$ then the traversal of the DFA will be reset and $(z[i - 1] \circ x[i])(q_0)$ will map to the correct state of a new path.
-      \item If $z[i - 1](q_0)$ maps to the correct state then $(z[i - 1] \circ x[i])(q_0)$ will also map to the correct state.
-    \end{itemize}
+    \item If $z[i - 1](q_0)$ maps wrongly to $q_0$ then the traversal of the DFA will be reset and $(z[i - 1] \circ x[i])(q_0)$ will map to the correct state of a new path.
+    \item If $z[i - 1](q_0)$ maps to the correct state then $(z[i - 1] \circ x[i])(q_0)$ will also map to the correct state.
   \end{itemize}
-  It can be determined where each path ends by the following predicate.
-  \begin{align*}
-    i = n - 1 \lor (z[i](q_0) = q_0 \land s \in F)
-  \end{align*}
-  We know if $i = n - 1$ then it must be the last state of the last path. The second case is if $z[i](q_0) = q_0$ and $s \in F$ holds. We know if $z[i](q_0) = q_0$ holds then it is possible a final state was mapped to $q_0$ by safe composition. And if $s \in F$ then since $q_0 \notin F$ we know $z[i](q_0) \neq s$ meaning the reason $z[i](q_0) = q_0$ must be because of a reset by safe composition meaning then it must be a final state in a path that is not the last path.
+\end{itemize}
+It can be determined where each path ends by the following predicate.
+\begin{align*}
+  i = n - 1 \lor (z[i](q_0) = q_0 \land s \in F)
+\end{align*}
+We know if $i = n - 1$ then it must be the last state of the last path. The second case is if $z[i](q_0) = q_0$ and $s \in F$ holds. We know if $z[i](q_0) = q_0$ holds then it is possible a final state was mapped to $q_0$ by safe composition. And if $s \in F$ then since $q_0 \notin F$ we know $z[i](q_0) \neq s$ meaning the reason $z[i](q_0) = q_0$ must be because of a reset by safe composition meaning then it must be a final state in a path that is not the last path.
 
-  Step 5-7. will first keep every last state by this predicate. Afterwards it is asserted that the last state $s \in F$. Only the last state of the last path is needed since all previous path would had been valid else it would had not been reset by safe composition. Finally just map every state to the token it has.
-\end{proof} 
+Step 5-7. will first keep every last state by this predicate. Afterwards it is asserted that the last state $s \in F$. Only the last state of the last path is needed since all previous path would had been valid else it would had not been reset by safe composition. Finally just map every state to the token it has.
 
 \begin{example}[Problem with this method]
   If we had the following three patterns.
@@ -294,103 +295,12 @@ Using this and previous definitions can be put together to the following algorit
   \end{align*}
   The token sequence of this input could be determined to be $\tau_1, \tau_2, \tau_3$ with spans $(0, 3), (3, 4), (4, 7)$ if you reset at the last acceptings state. But since the algorithm resets at the last state from an accepting state then it fails. Meaning it would be able to recongnize $\tau_1$. The problem is at the token $\tau_2$ would get the span $(3, 5)$ and then the algorithm would not recongnize any token with the pattern $)a$.
 \end{example}
+\subsection{Syntax Trees}
+The alpacc parser generator is a parser generator which creates parser for the LLP grammer class. The LLP parsers described in the LLP parsing paper \cite{Vagner2007} only touches upon the verification and production sequence construction of parsing not the creation of the syntax tree. This would also had to be done in a data-parallel manner else we would run into a bottle-neck. A method for this is described in Voetters master thesis \cite[32-33]{voetter2021} about compilation on the GPU. Here it is described how to create a syntax tree using the representation from Hsu PhD dissertation \cite[77-81]{hsu2019} where you have a parent that can be used for multiple transformations of a syntax tree. The representation of the tree will be an array of nodes where each node has the index to its parent node. The nodes will also be given in a preorder traversal of the tree. This kind of representation is much more fit for data parallelism than som recursive datatype, since recursion does not play well with data-parallelism.
 
-\subsection{Grammar Extension for Syntax Trees}
-The way we will extended the grammar is by adding productions that can be uniquely be related to the terminals. We wish to do so such that when producing a production sequence then its terminals will show up in its production sequence. This can then be use when constructing the syntax tree. To do this extension we start by creating a secondary set of nonterminals.
-\begin{align*}
-  N_{T} = \{A_t : t \in T\}, \text{ where } A_t \notin N \text{ for any } t \in T
-\end{align*}
-And we also create an secondary set of productions.
-\begin{align*}
-  P_{T} = \{A_t \to t : t \in T\}, \text{ where } A_t \to t \notin P \text{ for any } t \in T
-\end{align*}
-Now we create a new set of productions by replacing every terminal in the right-hand side of a production by its corresponding nonterminal.
-\begin{align*}
-  P_r = \{A \to \delta[A_{t_1}/t_1, \dots A_{t_n}/t_1] : A \to \delta \in P\}
-\end{align*}
-The final grammar that will be used for parsing is now.
-\begin{align*}
-  G' = (N', T', P', S') = (N \cup N_T, T, P_r \cup P_T, S)
-\end{align*}
-This does not affect which grammars can be parsed. To show this is correct for LLP parsing we first will need to show it is correct for LL parsing. The definition of a $\LL(k)$\footnote{This exact definition was found in my Bachelor thesis.} parsing table is as followed.
-\begin{definition}[$\LL(k)$ table]
-  Let $G = (N, T, P, S)$ be a $\LL(k)$ context-free grammar and $\tau : N \times T^* \to \mathbb{P}(\mathbb{N})$ denote the $\LL(k)$ table. For a given production $A \to \delta = p_i \in P$ where $i \in \{0, ..., |P| - 1\}$ is a unique index.
-  \begin{gather*}
-      i \in \tau(A, s) \text{ where } s \in \FIRST^G_k(\delta) \truncprod{k} \FOLLOW^G_k(A)
-  \end{gather*}
-  If for a given grammar it holds that $|\tau(A, s)| \leq 1$ for all $(A, s) \in N \times T^*$ then the grammar is $\LL(k)$.
-\end{definition}
-\begin{proof}
-  If we have a grammar $G$ that is $\LL(k)$. Then for a production $A \to \delta \in P$ and its corresponding production $A \to \delta[A_{t_1}/t_1, \dots A_{t_n}/t_1] = A' \to \delta' \in P_r$ we have.
-  \begin{align*}
-    \FIRST^G_k(\delta) \truncprod{k} \FOLLOW^G_k(A) = \FIRST^{G'}_k(\delta') \truncprod{k} \FOLLOW^{G'}_k(A)
-  \end{align*}
-  Since the first and follow-sets are unchanged for productions in $P_r$ because all added nonterminals directly becomes their corresponding terminals in a derivation. Therefore none of these productions leads to a table conflict. Then for a production $A_t \to t \in P_T$ we have.
-  \begin{gather*}
-    i \in \tau(A_t, s) \text{ where } s \in \FIRST^{G'}_k(t) \truncprod{k} \FOLLOW^{G'}_k(A_t)
-  \end{gather*}
-  Since $A_t$ only has a single production rule then it will always hold that $|\tau(A_t, s)| \leq 1$. Meaning the extended grammar $G'$ will also be a $\LL(k)$ grammar.
-\end{proof}
-\noindent Now to show that this extension does not change the grammars that can be parsed we need to be reminded of the PSLS definition.
-\begin{definition}{PSLS}
-  Let $G = (N, T, P, S)$ be a context-free grammar. The function $\PSLS(x, y)$ for a pair of strings $x, y \in T^*$ is defined as follows:
-  \begin{align*}
-    \text{PSLS}(x, y) = \{ & \alpha : \exists S \Rightarrow^*_{lm} wuA\beta \Rightarrow wxB\gamma \Rightarrow^* wxy\delta, \\
-    & w, u, y' \in T^*, a \in T, A, B \in N, \alpha, \beta, \gamma, \delta \in (N \cup T)^*, u \neq x, \\
-    & y = ay', \alpha \text{ is the shortest prefix of } B\gamma \\ 
-    & \text{ such that } (y, \alpha, ()) \vdash^* (y', \omega, \pi)\} \\
-    \cup \: \{ & a : \exists S \Rightarrow^* wuA\beta \Rightarrow wxa\gamma \Rightarrow^* wxy\delta, \\
-    & a = \text{FIRST}^G_1(y), w,u \in T^*, \beta, \gamma, \delta \in (N \cup T)^*, u \neq x \}
-  \end{align*}
-\end{definition}
-\begin{proof}
-  If we are given an admissible pair $(x, y)$ where $|\PSLS(x, y)| = 1$ for some LL grammar $G$ and some derivation.
-  \begin{align*}
-    S \Rightarrow^*_{lm} wuA\beta \Rightarrow wxB\gamma \Rightarrow^* wxy\delta
-  \end{align*}
-  Where there only exists a single shortests prefix $\alpha$ of $B\gamma$ such that $(y, \alpha, ()) \vdash^* (y', \omega, \pi)$ where for any $a$ that may be in the second set we have $a = \alpha$.
+\subsubsection{Tree Construction}
+ 
 
-  Then for the extended grammar $G'$ a derivation of the following form must also exists.
-  \begin{align*}
-    S' \Rightarrow^*_{lm} wu'A_tB'\gamma' \Rightarrow wxB'\gamma' \Rightarrow^* wxy\delta'
-  \end{align*}
-  Both of the leftmost derivations will have the common subderivation $wx$ since they still produce the same language and they both must produce $x$. 
-
-  We know $B\gamma$ and $B'\gamma'$ are both produced by leftmost derivations. If we have two leftmost derivations one from $G$ the other from $G$' with a common terminal string i.e. $S \Rightarrow^*_{lm} vC\mu$ and $S' \Rightarrow^*_{lm} vC'\mu'$. Then we would know they only differ by the need to derive on $A_t$. Since both $G$ and $G'$ are both LL grammars so there are not multiple ways of deriving $v$ so the same production sequence is used but $G'$ has the added $A_t$ productions. Therefore there is a mapping of this kind of derivation from $G'$ to $G$ by substituting $A_t$ with its terminal $t$. So therefore $(B'\gamma')[t_1/A_{t_1}, \dots t_n/A_{t_n}] = B\gamma$ and we can also go the other way $B'\gamma' = (B\gamma)[A_{t_1}/t_1, \dots A_{t_n}/t_1]$. We can do this since any $A_t$ in $B'\gamma'$ would have not yet been derived due to it being a leftmost derivaiton seperated by a nonterminal. Since there is a one-to-one relation between derivations of $wxB'\gamma'$ and $wxB\gamma$ then there must also exist a single shortest prefix $\alpha'$ of some $B'\gamma'$ such that $(y, \alpha', ()) \vdash^* (y', \omega', \pi')$. Since if there were multiple different shortest prefixes of some $B'\gamma'$ then so would $B\gamma$. Since you could map the multiple $\alpha'$ to mutiple $\alpha$.
-
-  If we are given an admissible pair $(x, y)$ where $|\PSLS(x, y)| = 1$ for some grammar $G$ and some derivation.
-  \begin{align*}
-    S \Rightarrow^* wuA\beta \Rightarrow wxa\gamma \Rightarrow^* wxy\delta
-  \end{align*}
-  Where there only exists a single $a = \text{FIRST}^G_1(y)$ where for any $\alpha$ that may be in the first set we have $a = \alpha$.
-
-  Then for the extended grammar $G'$ then a derivation of the following form must also exist.
-  \begin{align*}
-    S' \Rightarrow^*_{lm} wu'A_tB_a'\gamma' \Rightarrow wxB_a'\gamma' \Rightarrow^* wxy\delta'
-  \end{align*}
-  Once again we can use the same argumet, that there is a mapping between a leftmost derivations in $G$ and in $G'$ i.e. $(B_a'\gamma')[t_1/A_{t_1}, \dots t_n/A_{t_n}] = a\gamma$ and $B_a'\gamma' = (a\gamma)[A_{t_1}/t_1, \dots A_{t_n}/t_1]$. Therefore there is a one-to-one mapping between these two derivations. Knowing this and $B_a' \Rightarrow a$ then there only exist a single $a = \text{FIRST}^{G'}_1(B_a')$ for this form of derivation. We would now need to show that $B_a'$ would exist in the first set of the PSLS definition since it cannot exist in the second set. We see the derivation is of the same form as a derivation as in the first set. We also see the shortest prefix $\alpha'$ of $B_a'\gamma'$ is such that $(y, \alpha', ()) \vdash^* (y', \varepsilon, \pi')$ is $B_a'$. By $a = \text{FIRST}^{G'}_1(B_a') = \alpha'$ then $\alpha'$ is the only such prefix.
-\end{proof}
-
-\section{Implementation}
-\subsection{Tokenization}
-The implementation of tokenization is done by a variation of \ref{prop:closure}. We do not have to do fixed point iteration on alle of the endofunctions but only endofuctions that are neighbouring eachother. Then when you compose two transitions then you would need to add them as new transitions. So if you had the following pattern you wanted to match $abc$ then $a$ is a neighbor to $b$ and $b$ is a neighbor to $c$. So initially we have a set of endofunctions.
-\begin{align*}
-  \{\delta(a), \delta(b), \delta(c)\}
-\end{align*}
-Then we compose both $\delta(a)$ with $\delta(b)$ and $\delta(b)$ with $\delta(c)$ since both pairs are neighbouring transitions. Then the set of the new composition together with the old compositions results in the set.
-\begin{align*}
-  \{\delta(a), \delta(b), \delta(c)\} \cup \{\delta(a) \circ \delta(b), \delta(b) \circ \delta(c)\}
-\end{align*}
-Now $\delta(a) \circ \delta(b)$ is composed with $\delta(c)$ and $\delta(a)$ is composed with $\delta(b) \circ \delta(c)$. The set of these compositions are then unioned with the old set.
-\begin{align*}
-  \{\delta(a), \delta(b), \delta(c), \delta(a) \circ \delta(b), \delta(b) \circ \delta(c)\} \cup \{\delta(a) \circ \delta(b) \circ \delta(c)\}
-\end{align*}
-This ends up being the final set.
-
-\subsection{Tree Construction}
-The alpacc parser generator is a parser generator which creates parser for the LLP grammer class. The LLP parsers described in the LLP parsing paper \cite{Vagner2007} only touches upon the verification and production sequence construction of parsing not the creation of the syntax tree. This would also had to be done in a data-parallel manner else we would run into a bottle-neck. A method for this is described in Voetters master thesis \cite[32-33]{voetter2021} about compilation on the GPU. Here it is described how to create a syntax tree using the representation from Hsu PhD dissertation \cite[77-81]{hsu2019} where you have a parent that can be used for multiple transformations of a syntax tree. The representation of the tree will be an array of nodes where each node has the index to its parent node. The nodes will also be given in a preorder traversal of the tree. This kind of representation is much more fit for data parallelism than som recursive datatype, since recursion does not play well with data-parallelism. 
-
-\subsubsection{Overview of Tree Construction}
 So as an example we wish to construct syntax tree for the grammar.
 \begin{gather*}
   1)\:\: E \to TE' \quad 2)\:\: E' \to +TE' \quad 3)\:\: E' \to \varepsilon \quad 4)\:\: T \to a \quad 5) \: \: T \to [E]
@@ -435,36 +345,151 @@ The first problem to tackle is terminals are not included in the left parse retu
 \begin{gather*}
   [E_1, T_4, E_2', T_5, E_1, T_4, E_2', T_4, E_3', E_3']
 \end{gather*}
-This problem can be solved by extending a given grammar $(N, T, P, s)$ where $N$ is the set of nonterminalsm, $T$ is the set of terminals, $P$ is the set of productions, and $S$ is the initial nonterminal.
+To create the syntax trees the first problem is how to weave together the production sequence with the sequence of terminals. This is done by extending the grammar such that each terminal is associated with a unique production. That way a production in the production sequence will ahve a direct correspondent to a terminal. This can then be use when constructing the syntax tree.
 \begin{gather*}
   [E_1, T_4, A_a, E_2', A_+, T_5, A_[, E_1, T_4, A_a, E_2', A_+, T_4, A_a, E_3', A_], E_3']
 \end{gather*}
+Here $A_t$ is a production that produces the single terminal it represents. Then we can just map everyone of these productions to its terminal like so.
 \begin{gather*}
   [E_1, T_4, a, E_2', +, T_5, [, E_1, T_4, a, E_2', +, T_4, a, E_3', ], E_3']
 \end{gather*}
+A concern with this method is if this changes the number of grammars that can be parsed by LLP or if it changes the size of the table used for LLP parsing. These problem does not exists for this extension and it is later prooven these problems does not exists. 
 \begin{table}[H]
   \centering
-  \begin{tabular}{c|c|c}
-    Parent Index & Node \\
-    0  &  $E_1$ \\ \hline
-    0  &  $T_4$ \\ \hline
-    1  &  $a$ \\ \hline
-    0  &  $E'_2$ \\ \hline
-    3  &  $+$ \\ \hline
-    3  &  $T_5$ \\ \hline
-    5  &  $[$ \\ \hline
-    5  &  $E_1$ \\ \hline
-    7  &  $T_4$ \\ \hline
-    8  &  $a$ \\ \hline
-    7  &  $E'_2$ \\ \hline
-    10 &  $+$ \\ \hline
-    10 &  $T_4$ \\ \hline
-    12 &  $a$ \\ \hline
-    10 &  $E'_3$ \\ \hline
-    5  &  $]$ \\ \hline
-    3  &  $E'_3$
+  \begin{tabular}{c|c|c|c|c}
+    Arity & Stack Change & Stack Depth & Parent Index & Node \\
+    2 & 1  & 0 & 0  & $E_1$  \\ \hline
+    1 & 0  & 1 & 0  & $T_4$  \\ \hline
+    0 & -1 & 1 & 1  & $a$    \\ \hline
+    3 & 2  & 0 & 0  & $E'_2$ \\ \hline
+    0 & -1 & 2 & 3  & $+$    \\ \hline
+    3 & 2  & 1 & 3  & $T_5$  \\ \hline
+    0 & -1 & 3 & 5  & $[$    \\ \hline
+    2 & 1  & 2 & 5  & $E_1$  \\ \hline
+    1 & 0  & 3 & 7  & $T_4$  \\ \hline
+    0 & -1 & 3 & 8  & $a$    \\ \hline
+    3 & 2  & 2 & 7  & $E'_2$ \\ \hline
+    0 & -1 & 4 & 10 & $+$    \\ \hline
+    1 & 0  & 3 & 10 & $T_4$  \\ \hline
+    0 & -1 & 3 & 12 & $a$    \\ \hline
+    0 & -1 & 2 & 10 & $E'_3$ \\ \hline
+    0 & -1 & 1 & 5  & $]$    \\ \hline
+    0 & -1 & 0 & 3  & $E'_3$
   \end{tabular}
 \end{table}
+
+\subsubsection{Grammar Extension}
+We will first need a precise definition of the grammar extension. This is needed to show it does not lead to fewer grammars being LLP or larger LLP tables. 
+
+Given a grammar $(N, T, P, S)$ where $N$ is the set of nonterminalsm, $T$ is the set of terminals, $P$ is the set of productions, and $S$ is the initial nonterminal. We first construct the following set of nonterminals.
+\begin{align*}
+  N_{T} = \{A_t : t \in T\}, \text{ where } A_t \notin N \text{ for any } t \in T
+\end{align*}
+And we also create an secondary set of productions.
+\begin{align*}
+  P_{T} = \{A_t \to t : t \in T\}, \text{ where } A_t \to t \notin P \text{ for any } t \in T
+\end{align*}
+Now we create a new set of productions by replacing every terminal in the right-hand side of a production by its corresponding nonterminal.
+\begin{align*}
+  P_r = \{A \to \delta[A_{t_1}/t_1, \dots A_{t_n}/t_1] : A \to \delta \in P\}
+\end{align*}
+The final grammar that will be used for parsing is now.
+\begin{align*}
+  G' = (N', T', P', S') = (N \cup N_T, T, P_r \cup P_T, S)
+\end{align*}
+First we will need to show that any LL grammar extended can still be parsed using LL parsing. The definition of a $\LL(k)$\footnote{I do not know where else to cite from. The definition is found in my Bachelor thesis and is partly based on other definitions.} \cite{due2023} parsing table is as followed.
+\begin{definition}[$\LL(k)$ table]
+  Let $G = (N, T, P, S)$ be a $\LL(k)$ context-free grammar and $\tau : N \times T^* \to \mathbb{P}(\mathbb{N})$ denote the $\LL(k)$ table. For a given production $A \to \delta = p_i \in P$ where $i \in \{0, ..., |P| - 1\}$ is a unique index.
+  \begin{gather*}
+      i \in \tau(A, s) \text{ where } s \in \FIRST^G_k(\delta) \truncprod{k} \FOLLOW^G_k(A)
+  \end{gather*}
+  If for a given grammar it holds that $|\tau(A, s)| \leq 1$ for all $(A, s) \in N \times T^*$ then the grammar is $\LL(k)$.
+\end{definition}
+\begin{proof}
+  Given a $\LL(k)$ grammar $G$, then for a production $A \to \delta \in P$ and its corresponding extended production $A \to \delta[A_{t_1}/t_1, \dots A_{t_n}/t_1] = A' \to \delta' \in P_r$ we have.
+  \begin{align*}
+    \FIRST^G_k(\delta) \truncprod{k} \FOLLOW^G_k(A) = \FIRST^{G'}_k(\delta') \truncprod{k} \FOLLOW^{G'}_k(A)
+  \end{align*}
+  The first and follow-sets must be unchanged for productions in $P_r$ because all added nonterminals directly becomes their corresponding terminals in a derivation. Therefore none of these productions leads to a table conflict. Then for a production $A_t \to t \in P_T$ we have.
+  \begin{gather*}
+    i \in \tau(A_t, s) \text{ where } s \in \FIRST^{G'}_k(t) \truncprod{k} \FOLLOW^{G'}_k(A_t)
+  \end{gather*}
+  Since $A_t$ only has a single production rule then it will always hold that $|\tau(A_t, s)| \leq 1$. Meaning the extended grammar $G'$ will also be a $\LL(k)$ grammar.
+\end{proof}
+Something to note is this extention does lead to larger LL tables but this is not the case for LLP. So now we will show this extension does not lead to larger LLP tables and does not change if a LLP grammar can be parsed. To do so we need to be reminded of the PSLS\footnote{This is a slightly modified definition by Vladislav Vagner because the old definition in the paper does not work.} \cite{Vagner2007} definition.
+\begin{definition}{PSLS}
+  Let $G = (N, T, P, S)$ be a context-free grammar. The function $\PSLS(x, y)$ for a pair of strings $x, y \in T^*$ is defined as follows:
+  \begin{align*}
+    \text{PSLS}(x, y) = \{ & \alpha : \exists S \Rightarrow^*_{lm} wuA\beta \Rightarrow wxB\gamma \Rightarrow^* wxy\delta, \\
+    & w, u, y' \in T^*, a \in T, A, B \in N, \alpha, \beta, \gamma, \delta \in (N \cup T)^*, u \neq x, \\
+    & y = ay', \alpha \text{ is the shortest prefix of } B\gamma \\ 
+    & \text{ such that } (y, \alpha, ()) \vdash^* (y', \omega, \pi)\} \\
+    \cup \: \{ & a : \exists S \Rightarrow^* wuA\beta \Rightarrow wxa\gamma \Rightarrow^* wxy\delta, \\
+    & a = \text{FIRST}^G_1(y), w,u \in T^*, \beta, \gamma, \delta \in (N \cup T)^*, u \neq x \}
+  \end{align*}
+\end{definition}
+We will also need the following Lemma.
+\begin{lemma}[Grammar Extension Bijection]\label{lemma:geb}
+  Let $G$ be an $LL$ grammar and let $G'$ be the extended grammar of $G$. If we have the following two leftmost derivations from each grammar $S \Rightarrow_{lm}^* wA\delta \Rightarrow w\gamma$ and $S'\Rightarrow_{lm}^* wA'\delta \Rightarrow w\gamma'$ then the following derivations hold.
+  \begin{itemize}
+    \item $S \Rightarrow_{lm}^* w\gamma'[A_{t_1}/t_1, \dots A_{t_n}/t_n]$
+    \item $S' \Rightarrow_{lm}^* w\gamma[t_1/A_{t_1}, \dots t_n/A_{t_n}]$
+  \end{itemize}
+  Hence there exists a bijection between these two derivations.
+\end{lemma}
+\begin{proof}
+  We know that $G$ and $G'$ produces the same language and due to them both being LL then there is only one way of deriving their leftmost derivations. It is also known that since $A$ is a nonterminal in $G$ then it must not be a $A_t$ nonterminal in $G'$ else they would not share a common terminal string $w$. So the derivation of $A'$ must use a production of the form $A' \to \alpha[A_{t_1}/t_1, \dots A_{t_n}/t_1] \in P_r$ where $A \to \alpha \in P$. Then we know that when the single derivation on $A'$ is performed then not a single $A_t$ nonterminal in $\gamma'$ has been derived to its terminal $t$. Therefore it must be the case that $\gamma = \gamma'[A_{t_1}/t_1, \dots A_{t_n}/t_n]$. Likewise $A'$ has just been derived so no $A_t$ nonterminals have been derived meaning $\gamma' = \gamma[t_1/A_{t_1}, \dots t_n/A_{t_n}]$.
+\end{proof}
+Now we will be able to show what we wanted to show.
+\begin{proof}
+  The proof will be done by showing that given a LLP grammar $G$ i.e. for any admissible pair $(x, y)$ we have $|\PSLS(x, y)| = 1$. Then it will follow that for its corresponding extended grammar $G'$ we must also have $|\PSLS(x, y)| = 1$.
+  \begin{itemize}
+    \item If we are given an pair $(x, y)$ where $|\PSLS(x, y)| = 1$ for some LLP grammar $G$ and we have some derivation.
+    \begin{align*}
+      S \Rightarrow^*_{lm} wuA\beta \Rightarrow wxB\gamma \Rightarrow^* wxy\delta
+    \end{align*}
+    Where there only exists a single shortests prefix $\alpha$ of $B\gamma$ such that $(y, \alpha, ()) \vdash^* (y', \omega, \pi)$ and for any $a$ that may be in the second set we have $a = \alpha$. 
+  
+    Given the extended grammar $G'$, then for the pair $(x, y)$ to be in the first set of the PSLS definition then it must be of the form.
+    \begin{align*}
+      S' \Rightarrow^*_{lm} wu'A_tB'\gamma' \Rightarrow wxB'\gamma' \Rightarrow^* wxy\delta'
+    \end{align*}
+    Both of the leftmost derivations will have the common subderivation $wx$ since they still produce the same language and they both must produce $x$. 
+  
+    By Lemma \ref{lemma:geb} we have a bijection between derivations of $wxB'\gamma'$ and $wxB\gamma$ then there must also exist a single shortest prefix $\alpha'$ of some $B'\gamma'$ such that $(y, \alpha', ()) \vdash^* (y', \omega', \pi')$. Since if there were multiple different shortest prefixes of some $B'\gamma'$ then so would $B\gamma$.
+    
+    \item If we are given an pair $(x, y)$ where $|\PSLS(x, y)| = 1$ for some LLP grammar $G$ and we have some derivation.
+    \begin{align*}
+      S \Rightarrow^* wuA\beta \Rightarrow wxa\gamma \Rightarrow^* wxy\delta
+    \end{align*}
+    Where there only exists a single $a = \text{FIRST}^G_1(y)$ where for any $\alpha$ that may be in the first set we have $a = \alpha$.
+  
+    Then for the extended grammar $G'$ then a derivation of the following form must also exist.
+    \begin{align*}
+      S' \Rightarrow^*_{lm} wu'A_tB_a'\gamma' \Rightarrow wxB_a'\gamma' \Rightarrow^* wxy\delta'
+    \end{align*}
+    By Lemma \ref{lemma:geb} we have a bijection between derivations of $wxB_a'\gamma'$ and $wxa\gamma$. Knowing this and $B_a' \Rightarrow a$ then there only exist a single $a = \text{FIRST}^{G'}_1(B_a')$ for this form of derivation.
+    
+    We would now need to show that $B_a'$ would exist in the first set of the PSLS definition since it cannot exist in the second set. We see the derivation is of the same form as a derivation as in the first set. We also see the shortest prefix $\alpha'$ of $B_a'\gamma'$ is such that $(y, \alpha', ()) \vdash^* (y', \varepsilon, \pi')$ is $B_a'$. By $a = \text{FIRST}^{G'}_1(B_a') = \alpha'$ then $\alpha'$ is the only such prefix.
+  \end{itemize}
+  Thereby the extended grammar is also LLP and since the bijection grammar and its exnteded version then we know the $\PSLS$ table does not get larger.
+\end{proof}
+
+\section{Implementation}
+\subsection{Tokenization}
+The implementation of tokenization is done by a variation of \ref{prop:closure}. We do not have to do fixed point iteration on alle of the endofunctions but only endofuctions that are neighbouring eachother. Then when you compose two transitions then you would need to add them as new transitions. So if you had the following pattern you wanted to match $abc$ then $a$ is a neighbor to $b$ and $b$ is a neighbor to $c$. So initially we have a set of endofunctions.
+\begin{align*}
+  \{\delta(a), \delta(b), \delta(c)\}
+\end{align*}
+Then we compose both $\delta(a)$ with $\delta(b)$ and $\delta(b)$ with $\delta(c)$ since both pairs are neighbouring transitions. Then the set of the new composition together with the old compositions results in the set.
+\begin{align*}
+  \{\delta(a), \delta(b), \delta(c)\} \cup \{\delta(a) \circ \delta(b), \delta(b) \circ \delta(c)\}
+\end{align*}
+Now $\delta(a) \circ \delta(b)$ is composed with $\delta(c)$ and $\delta(a)$ is composed with $\delta(b) \circ \delta(c)$. The set of these compositions are then unioned with the old set.
+\begin{align*}
+  \{\delta(a), \delta(b), \delta(c), \delta(a) \circ \delta(b), \delta(b) \circ \delta(c)\} \cup \{\delta(a) \circ \delta(b) \circ \delta(c)\}
+\end{align*}
+This ends up being the final set.
 
 \section{Conclusion}
 Conclusion.
