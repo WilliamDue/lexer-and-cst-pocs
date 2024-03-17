@@ -295,12 +295,10 @@ Step 5-7. will first keep every last state by this predicate. Afterwards it is a
   \end{align*}
   The token sequence of this input could be determined to be $\tau_1, \tau_2, \tau_3$ with spans $(0, 3), (3, 4), (4, 7)$ if you reset at the last acceptings state. But since the algorithm resets at the last state from an accepting state then it fails. Meaning it would be able to recongnize $\tau_1$. The problem is at the token $\tau_2$ would get the span $(3, 5)$ and then the algorithm would not recongnize any token with the pattern $)a$.
 \end{example}
-\subsection{Syntax Trees}
-The alpacc parser generator is a parser generator which creates parser for the LLP grammer class. The LLP parsers described in the LLP parsing paper \cite{Vagner2007} only touches upon the verification and production sequence construction of parsing not the creation of the syntax tree. This would also had to be done in a data-parallel manner else we would run into a bottle-neck. A method for this is described in Voetters master thesis \cite[32-33]{voetter2021} about compilation on the GPU. Here it is described how to create a syntax tree using the representation from Hsu PhD dissertation \cite[77-81]{hsu2019} where you have a parent that can be used for multiple transformations of a syntax tree. The representation of the tree will be an array of nodes where each node has the index to its parent node. The nodes will also be given in a preorder traversal of the tree. This kind of representation is much more fit for data parallelism than som recursive datatype, since recursion does not play well with data-parallelism.
+\subsection{Concrete Syntax Trees}
+The alpacc parser generator is a parser generator which creates parser for the LLP grammer class. The LLP parsers described in the LLP parsing paper \cite{Vagner2007} only touches upon the verification and production sequence construction of parsing not the creation of concrete the syntax tree. This would also had to be done in a data-parallel manner else we would run into a bottle-neck. A method for this is described in Voetters master thesis \cite[32-33]{voetter2021} about compilation on the GPU. Here it is described how to create a concrete syntax tree using the representation from Hsu PhD dissertation \cite[77-81]{hsu2019} where you have a parent that can be used for multiple transformations of a syntax tree. The representation of the tree will be an array of nodes where each node has the index to its parent node. The nodes will also be given in a preorder traversal of the tree. This kind of representation is much more fit for data parallelism than som recursive datatype.
 
-\subsubsection{Tree Construction}
- 
-
+\subsubsection{Concrete Syntax Tree Construction}
 So as an example we wish to construct syntax tree for the grammar.
 \begin{gather*}
   1)\:\: E \to TE' \quad 2)\:\: E' \to +TE' \quad 3)\:\: E' \to \varepsilon \quad 4)\:\: T \to a \quad 5) \: \: T \to [E]
@@ -353,30 +351,61 @@ Here $A_t$ is a production that produces the single terminal it represents. Then
 \begin{gather*}
   [E_1, T_4, a, E_2', +, T_5, [, E_1, T_4, a, E_2', +, T_4, a, E_3', ], E_3']
 \end{gather*}
-A concern with this method is if this changes the number of grammars that can be parsed by LLP or if it changes the size of the table used for LLP parsing. These problem does not exists for this extension and it is later prooven these problems does not exists. 
+A concern with this method is if this changes the number of grammars that can be parsed by LLP or if it changes the size of the table used for LLP parsing. These problem does not exists for this extension and it is later prooven these problems does not exists.
+
+The parent vector can then be constructed with the following algorithm.
+\begin{algorithm}[Parent Vector]\label{algo:parent}
+  Given a left parse $a_0$ then we can construct the the parent vector as followed.
+  \begin{enumerate}
+    \item For each production map it to its arity i.e. the number of nonterminals in the right-hand side of the production.
+    \begin{align*}
+      a_1 = \mathbf{map} \: arity \: a_0
+    \end{align*}
+    Here $arity$ is a function that maps productions to its arity.
+    \item Substract one from each arity.
+    \begin{align*}
+      a_2 = \mathbf{map} \: (-1) \: a_1
+    \end{align*}
+    \item Do an exclusive scan using addition on the arities.
+    \begin{align*}
+      a_3 = \mathbf{scan} \: (+) \: a_2
+    \end{align*}
+    \item Find the index of the previous smaller or equal element for each element from the previous step. 
+    \begin{align*}
+      a_4 = \mathbf{map} \: parent \: a_3
+    \end{align*}
+    Here $parent$ is a function that finds the index of the previous smaller or equal element in $a_3$.
+    \item Set the first elements parents to be it self. $a_5 = a_4[0] = 0$
+  \end{enumerate}
+\end{algorithm}
+Using this algorithm we can show the computation of parent vector for the example.
 \begin{table}[H]
   \centering
-  \begin{tabular}{c|c|c|c|c}
-    Arity & Stack Change & Stack Depth & Parent Index & Node \\
-    2 & 1  & 0 & 0  & $E_1$  \\ \hline
-    1 & 0  & 1 & 0  & $T_4$  \\ \hline
-    0 & -1 & 1 & 1  & $a$    \\ \hline
-    3 & 2  & 0 & 0  & $E'_2$ \\ \hline
-    0 & -1 & 2 & 3  & $+$    \\ \hline
-    3 & 2  & 1 & 3  & $T_5$  \\ \hline
-    0 & -1 & 3 & 5  & $[$    \\ \hline
-    2 & 1  & 2 & 5  & $E_1$  \\ \hline
-    1 & 0  & 3 & 7  & $T_4$  \\ \hline
-    0 & -1 & 3 & 8  & $a$    \\ \hline
-    3 & 2  & 2 & 7  & $E'_2$ \\ \hline
-    0 & -1 & 4 & 10 & $+$    \\ \hline
-    1 & 0  & 3 & 10 & $T_4$  \\ \hline
-    0 & -1 & 3 & 12 & $a$    \\ \hline
-    0 & -1 & 2 & 10 & $E'_3$ \\ \hline
-    0 & -1 & 1 & 5  & $]$    \\ \hline
-    0 & -1 & 0 & 3  & $E'_3$
+  \begin{tabular}{c|c|c|c|c|c}
+    Arity & Stack Change & Stack Depth & Parent Index & Node & Index \\ \hline
+    2 & 1  & 0 & 0  & $E_1$  & 0  \\ \hline
+    1 & 0  & 1 & 0  & $T_4$  & 1  \\ \hline
+    0 & -1 & 1 & 1  & $a$    & 2  \\ \hline
+    3 & 2  & 0 & 0  & $E'_2$ & 3  \\ \hline
+    0 & -1 & 2 & 3  & $+$    & 4  \\ \hline
+    3 & 2  & 1 & 3  & $T_5$  & 5  \\ \hline
+    0 & -1 & 3 & 5  & $[$    & 6  \\ \hline
+    2 & 1  & 2 & 5  & $E_1$  & 7  \\ \hline
+    1 & 0  & 3 & 7  & $T_4$  & 8  \\ \hline
+    0 & -1 & 3 & 8  & $a$    & 9  \\ \hline
+    3 & 2  & 2 & 7  & $E'_2$ & 10 \\ \hline
+    0 & -1 & 4 & 10 & $+$    & 11 \\ \hline
+    1 & 0  & 3 & 10 & $T_4$  & 12 \\ \hline
+    0 & -1 & 3 & 12 & $a$    & 13 \\ \hline
+    0 & -1 & 2 & 10 & $E'_3$ & 14 \\ \hline
+    0 & -1 & 1 & 5  & $]$    & 15 \\ \hline
+    0 & -1 & 0 & 3  & $E'_3$ & 16
   \end{tabular}
+  \caption{Overview of how the parent vector is constructed.}
 \end{table}
+Note how the arity for the original productions end up being the number of of symbols in the right-hand side while each terminal symbol ends up being zero. This is due to the extension done to the original grammar.
+
+Step 4. in algorithm \ref{algo:parent} could be solve in different ways. A possible way to do it in a data-parallel manner is doing a linear backwards search. This would lead to $O(n^2)$ work and $O(n)$ span. This would be a pretty huge bottle neck-compared to the $O(n)$ work and $O(\log n)$ span for both tokenization and parsing.
 
 \subsubsection{Grammar Extension}
 We will first need a precise definition of the grammar extension. This is needed to show it does not lead to fewer grammars being LLP or larger LLP tables. 
