@@ -32,9 +32,41 @@
 
 \addbibresource{bibliography.bib}
 
+%https://github.com/diku-dk/futhark/blob/master/tools/futhark-listings.tex
+\lstdefinelanguage{futhark}
+{
+  % list of keywords
+  morekeywords={
+    do,
+    else,
+    for,
+    if,
+    in,
+    include,
+    let,
+    loop,
+    then,
+    type,
+    val,
+    while,
+    with,
+    module,
+    def,
+    entry,
+    local,
+    open,
+    import,
+    assert,
+    match,
+    case,
+  },
+  sensitive=true, % Keywords are case sensitive.
+  morecomment=[l]{--}, % l is for line comment.
+  morestring=[b]" % Strings are enclosed in double quotes.
+}
+
 \lstset{
-  language=c++,
-  numbers=left,                 
+  language=futhark,            
   numbersep=5pt,
   basicstyle=\ttfamily\footnotesize,
   breaklines=true,
@@ -139,7 +171,7 @@ To explain the theory of parallel lexical analysis we first remind the reader of
 \begin{definition}[Total DFA]
   A DFA $(Q, \Sigma, \delta, q_0, F)$ is said to be total if and only if
   \begin{align*}
-    \delta(a, q) \in Q : \forall (a, q) \in \Sigma \times Q
+    \forall (a, q) \in \Sigma \times Q: \delta(a, q) \in Q 
   \end{align*}
   If a DFA is total we may use a curried transition function $\delta: \Sigma \to Q \to Q$.
 \end{definition}
@@ -151,10 +183,13 @@ The reason for doing so is because if we have any two functions $g = \delta(a)$ 
 \end{align*}
 This allows for an alternative way of determining if a string can be produced by an DFA. Instead of first evaluating $f(q)$, then $g(f(q))$ and then checking if this state is a member of $F$. We could instead partially apply $\delta$ to the symbols and then compose them to a single function which could be used to determine if a string is valid. This sets the stage for data-parallel lexing, we want to find a way to make the problem into a \texttt{map-reduce}. We want to do this because it can be computed using a data-parallel implementation unlike the normal way of traversing a DFA.
 
-For the ability to use a data-parallel \texttt{map-reduce} we must have a monoidal structure. Here $\Delta$ is the set of all the composed partially applied $\delta$ functions needs to be closed under function composition.
+For the ability to use a data-parallel \texttt{map-reduce} we must have a monoidal structure. Here $\Delta$ is the set of all the composed partially applied delta functions needs to be closed under function composition.
+\begin{remark}
+  A partially applied delta function is shortened to \textit{PADF}. If multiple PADFs are composed then they are a \textit{composed PADF}.
+\end{remark}
 
 \begin{proposition}[DFA Composition Closure]\label{prop:closure}
-  Given a total DFA then the set of endofunctions $\Delta: Q^Q$ will be closed under composition. The set $\Delta$ is the set $\Delta_i$ in the recurrence relation with the smallest $i$ such that $\Delta_i = \Delta_{i + 1}$.
+  Given a total DFA then the set of composed PADFs $\Delta: Q^Q$ will be closed under composition. The set $\Delta$ is the set $\Delta_i$ in the recurrence relation with the smallest $i$ such that $\Delta_i = \Delta_{i + 1}$.
   \begin{align*}
     \Delta_1 &= \{\delta(a) : a \in \Sigma \} \\
     \Delta_{i + 1} &= \Delta_i \cup \{f \circ g : f, g \in \Delta_i\}
@@ -163,13 +198,17 @@ For the ability to use a data-parallel \texttt{map-reduce} we must have a monoid
 \begin{proof}
   We will circt by showing that a solution $\Delta$ exists. First note that the cardinality is monotonically increasing i.e. $\Delta_i \subseteq \Delta_{i + 1}$ since $\Delta_{i + 1}$ is a union of $\Delta_i$ and another set. Secondly note that since $|Q| < \infty$ then a finite amount of functions of the form $Q \to Q$ can exists. Since the set is bounded and increasing then at some point $\Delta_i = \Delta_{i + 1}$ and the smallest $i$ where it holds is the solution $\Delta$.
 
-  For $\Delta$ to be closed under composition, then for arbitray $f, g \in \Delta$ it must hold that $f \circ g \in \Delta$. Since $\Delta_1$ is the set of endofunctions that contructs $\Delta$ and composition is associative then all elements of $\Delta$ can be expressed of the form.
+  For $\Delta$ to be closed under composition, then for arbitray $f, g \in \Delta$ it must hold that $f \circ g \in \Delta$. Since $\Delta_1$ is the set of PADFs that contructs $\Delta$ and composition is associative then all elements of $\Delta$ can be expressed of the form.
   \begin{align*}
     \delta(a_1) \circ \dots \circ \delta(a_n) \in \Delta
   \end{align*}
-  If all permutations with replacement of $\Delta_1$ of any sequence length are members of $\Delta$ then $\Delta$ would be closed under composition. Futhermore, it is known that $\Delta$ is finite so the sequences at some point $\Delta_i = \Delta_{i + 1}$ would only add new sequences but no new endofunctions. Therefore it suffices to show that if all sequences of length $k$ where $1 \leq k \leq i$ is a subset of $\Delta_i$ then $\Delta$ is closed under composition. This can be shown using a proof by induction.
+  Given an expression of the aforementioned form we could construct a sequence of PADFs.
+  \begin{align*}
+    \delta(a_1), \dots, \delta(a_n)
+  \end{align*}
+  So we would have a surjective map from sequences to $\Delta$, since some seuqences would map to the same composed PADF. So if all permutations with replacement of $\Delta_1$ of any sequence length are members of $\Delta$ then $\Delta$ would be closed under composition. Futhermore, since it was shown that $\Delta$ is finite so the sequences at some point $\Delta_i = \Delta_{i + 1}$ would only add new sequences but no new composed PADFs. Therefore it suffices to show that if all sequences of length $k$ where $1 \leq k \leq i$ is a subset of $\Delta_i$ then $\Delta$ is closed under composition. This can be shown using a proof by induction.
 
-  Base: $\Delta_1$ trivially holds since it only contains sequences of length one and they are the initial endofunctions.
+  Base: $\Delta_1$ trivially holds since it only contains sequences of length one and they are the initial PADFs.
 
   Step: Given $\Delta_i$ contains every sequence of length $i$ or less then we to show this implies that $\Delta_{i + 1}$ will contain every sequence of length $i + 1$ or less.
 
@@ -184,11 +223,11 @@ For the ability to use a data-parallel \texttt{map-reduce} we must have a monoid
 \begin{algorithm}[Data-parallel String Match]\label{algo:lex}
   It can be determined in $O(n)$ work and $O(\log n)$ span if a string can be produced by a DFA. First construct the total DFA $(Q, \Sigma, \delta, q_0, F)$ from the DFA.
   \begin{enumerate}
-    \item Partially apply $\delta$ to every symbol in the input string such that it becomes a sequence of endofunctions.
+    \item Partially apply $\delta$ to every symbol in the input string such that it becomes an array of PADFs.
     \begin{align*}
       \mathbf{map}\: \delta \: [a_1, a_2, \dots, a_{n - 1}, a_n] = [\delta(a_1), \delta(a_2), \dots, \delta(a_{n - 1}), \delta(a_n)]
     \end{align*}
-    \item Reduce the endofunction into a single endofunction $\delta': Q \to Q$. \begin{align*}
+    \item Reduce the PADFs into a single composed PADF $\delta': Q \to Q$. \begin{align*}
       \mathbf{reduce} \: (\circ) \: id \: [\delta(a_1), \delta(a_2), \dots, \delta(a_{n - 1}), \delta(a_n)] = \delta'
     \end{align*}
     \item Evaluate $\delta'(q_0)$ and determine if $\delta'(q_0) \in F$.
@@ -204,27 +243,27 @@ For data-parallel tokenization we need to extent data-parallel algorithm \ref{al
 \noindent We will also need a single state to point to which is the dead state. This will become useful when the DFA needs to be traversed multiple times. Since we will need to be able to recongnize when the end of a traversal is reached and we have to restart.
 
 \begin{definition}[Total DFA with a Dead State]
-  Given a DFA it is made total with a dead state by defining a new set of states $Q' = Q \cup \{d\}$ where $d$ is the dead state. Additionally a new transition function $\delta'$ is defined.
+  Given a DFA it is made total with a dead state by defining a new set of states $Q' = Q \cup \{q_{\bot}\}$ where $q_{\bot}$ is the dead state. Additionally a new transition function $\delta'$ is defined.
   \begin{align*}
     \delta'(a, q) = \begin{cases}
-      d &  (a, q) \notin \text{dom}(\delta) \\
+      q_{\bot} &  (a, q) \notin \text{dom}(\delta) \\
       \delta(a, q) & \text{otherwise}
     \end{cases}
   \end{align*}
 \end{definition}
 \noindent Now that we have a definition of a DFA where the dead state is known another problem is needed to be solved. The problem is as mentioned before that the traversal of the DFA has to be restarted if a dead state is reached after an accepting state. This is done using the following binary operation.
 
-\begin{definition}[Safe Composition]
-  Given a DFA with two endofunctions $f = \delta(a)$ and $g = \delta(b)$. The operation $\oplus$ makes $f$ safe to compose such that it will continue traversing the DFA.
+\begin{definition}[Make PADF Safe Under Composition]
+  Given a DFA with two PADFs $f = \delta(a)$ and $g = \delta(b)$. The operation $\oplus$ makes $f$ safe to compose such that it will continue traversing the DFA.
   \begin{align*}
     (f \oplus g)(x) =
     \begin{cases}
-      q_0 & f(g(x)) = d \land g(x) \in F \\
+      q_0 & f(g(x)) = q_{\bot} \land g(x) \in F \\
       g(x) & \text{otherwise} 
     \end{cases}
   \end{align*}
 \end{definition}
-\noindent This definition will make every possible final state become the initial state. This forgets the final state but it allows for the traversal to continue. The forgetfulness is not a problem this can be solved by looking at the previous endofunction. This puts a limit on the lexer which is it only allows for going back to the previous state if a dead state is hit.
+\noindent This definition will make every possible final state become the initial state. This forgets the final state but it allows for the traversal to continue. The forgetfulness is not a problem this can be solved by looking at the previous PADF. This puts a limit on the lexer which is it only allows for going back to the previous state if a dead state is hit.
 Using this and previous definitions can be put together to the following algorithm.
 
 \begin{algorithm}[Data-parallel Tokenization]\label{algo:token}
@@ -234,7 +273,7 @@ Using this and previous definitions can be put together to the following algorit
     \begin{align*}
       \mathbf{map} \: (\delta) \: s = x
     \end{align*}
-    \item Make every endofunction safe for composition beside for the last endofunction.
+    \item Make every PADF safe for composition beside for the last PADF.
     \begin{align*}
       \mathbf{map} \: (\oplus) \: (\mathbf{init} \:x) \: (\mathbf{tail} \: x) \doubleplus [\delta_n] = [\delta_1 \oplus \delta_2, \dots, \delta_{n - 1} \oplus \delta_n, \delta_n] = y
     \end{align*}
@@ -265,12 +304,12 @@ Using this and previous definitions can be put together to the following algorit
 \end{algorithm}
 \noindent We will give an explanation of why the algorithm produces an array of paths where each path starts in $q_0$ and is not included in the path. Knowing where these paths ends it can then be trivially used to construct the token sequence using the token function $\mathcal{T}$. We will also show that it can be correctly determine wether the DFA paths taken are correct.
 
-We know in step 1-2. every endofunction is created and we know at this point either it maps to some orignal states or some maps to $q_0$ because of safe composition. At step 3. a prefix sum using function composition is computed of these endofunctions. Which by Algorithm \ref{algo:lex} can give us all states traversed in the DFA. But due to safe composition $\oplus$ is used then an accepting state followed by an dead states will become the initial state $q_0$. This almost gives all the paths, since now when a final state in a path is reach it becomes the initial state and the traversal i restarted.
+We know in step 1-2. every PADF is created and is made safe so we know at this point either it maps to some orignal states or some maps to $q_0$ because the composition are safe. At step 3. a prefix sum using function composition is computed of these composed safe PADFs. Which by Algorithm \ref{algo:lex} can give us all states traversed in the DFA. But due to $\oplus$ is used then an accepting state followed by an dead states will become the initial state $q_0$. This almost gives all the paths, since now when a final state in a path is reach it becomes the initial state and the traversal i restarted.
 
 Then at step 4. the paths taken in the DFA from state $q_0$ is found. We know for a given state $s$ in a path it will can be one of these cases.
 \begin{itemize}
   \item If $i = 0$ then $x[i](q_0)$ will be the first state visited after $q_0$ by definition of the transition function.
-  \item If $i \neq 0$ then $s$ will be $(z[i - 1] \circ x[i])(q_0)$. $z[i - 1](q_0)$ could wrongly map to $q_0$ by definition of safe composition.
+  \item If $i \neq 0$ then $s$ will be $(z[i - 1] \circ x[i])(q_0)$. $z[i - 1](q_0)$ could wrongly map to $q_0$ by definition of making the composition safe.
   \begin{itemize}
     \item If $z[i - 1](q_0)$ maps wrongly to $q_0$ then the traversal of the DFA will be reset and $(z[i - 1] \circ x[i])(q_0)$ will map to the correct state of a new path.
     \item If $z[i - 1](q_0)$ maps to the correct state then $(z[i - 1] \circ x[i])(q_0)$ will also map to the correct state.
@@ -280,11 +319,11 @@ It can be determined where each path ends by the following predicate.
 \begin{align*}
   i = n - 1 \lor (z[i](q_0) = q_0 \land s \in F)
 \end{align*}
-We know if $i = n - 1$ then it must be the last state of the last path. The second case is if $z[i](q_0) = q_0$ and $s \in F$ holds. We know if $z[i](q_0) = q_0$ holds then it is possible a final state was mapped to $q_0$ by safe composition. And if $s \in F$ then since $q_0 \notin F$ we know $z[i](q_0) \neq s$ meaning the reason $z[i](q_0) = q_0$ must be because of a reset by safe composition meaning then it must be a final state in a path that is not the last path.
+We know if $i = n - 1$ then it must be the last state of the last path. The second case is if $z[i](q_0) = q_0$ and $s \in F$ holds. We know if $z[i](q_0) = q_0$ holds then it is possible a final state was mapped to $q_0$ by composition being safe. And if $s \in F$ then since $q_0 \notin F$ we know $z[i](q_0) \neq s$ meaning the reason $z[i](q_0) = q_0$ must be because of a reset by composition being safe meaning then it must be a final state in a path that is not the last path.
 
-Step 5-7. will first keep every last state by this predicate. Afterwards it is asserted that the last state $s \in F$. Only the last state of the last path is needed since all previous path would had been valid else it would had not been reset by safe composition. Finally just map every state to the token it has.
+Step 5-7. will first keep every last state by this predicate. Afterwards it is asserted that the last state $s \in F$. Only the last state of the last path is needed since all previous path would had been valid else it would had not been reset by composition being safe. Finally just map every state to the token it has.
 
-\begin{example}[Problem with this method]
+\begin{example}[Problem with this method]\label{ex:overlap}
   If we had the following three patterns.
   \begin{align*}
     \tau_1 = a(a \qquad \tau_2 = a\text{+} \qquad \tau_3 = a)a
@@ -372,9 +411,9 @@ The parent vector can then be constructed with the following algorithm.
     \end{align*}
     \item Find the index of the previous smaller or equal element for each element from the previous step. 
     \begin{align*}
-      a_4 = \mathbf{map} \: parent \: a_3
+      a_4 = \mathbf{map} \: prev \: a_3
     \end{align*}
-    Here $parent$ is a function that finds the index of the previous smaller or equal element in $a_3$.
+    Here $prev$ is a function that finds the index of the previous smaller or equal element in $a_3$.
     \item Set the first elements parents to be it self. $a_5 = a_4[0] = 0$
   \end{enumerate}
 \end{algorithm}
@@ -405,7 +444,41 @@ Using this algorithm we can show the computation of parent vector for the exampl
 \end{table}
 Note how the arity for the original productions end up being the number of of symbols in the right-hand side while each terminal symbol ends up being zero. This is due to the extension done to the original grammar.
 
-Step 4. in algorithm \ref{algo:parent} could be solve in different ways. A possible way to do it in a data-parallel manner is doing a linear backwards search. This would lead to $O(n^2)$ work and $O(n)$ span. This would be a pretty huge bottle neck-compared to the $O(n)$ work and $O(\log n)$ span for both tokenization and parsing.
+Step 4. in algorithm \ref{algo:parent} could be solve in different ways. A possible way to do it in a data-parallel manner is doing a linear backwards search. This would lead to $O(n^2)$ work and $O(n)$ span. This would be a pretty huge bottle neck-compared to the $O(n)$ work and $O(\log n)$ span for both tokenization and parsing. So a method for finding the previous smaller or equal element is used. This can be done in $O(n \log n)$ work and $O(\log n)$ span as described in Voetters masterthesis \cite[32-33]{voetter2021}.
+
+\begin{algorithm}[Previous Smaller or Equal Element]\label{algo:psee}
+  Given an array of $a_0$ where $|a_0| = 2^n$ and the array contains some set of elements $A$ where $(\leq, A)$ is a total order.
+  \begin{enumerate}
+    \item Construct tree of minima.
+    \begin{align*}
+      &\mathbf{let} \: create \: arr = \\
+      &\quad \mathbf{if} \: |arr| = 1 \\
+      &\quad \mathbf{then} \: arr \\
+      &\quad \mathbf{else} \: \mathbf{let} \: arr' = \mathbf{map} \: (\lambda i \to \min \: arr[2i] \: arr[2i + 1] ) \: (\mathbf{iota} \: |arr|) \\
+      &\quad \quad \quad \mathbf{in} \: create \: arr' \concat  arr
+    \end{align*}
+    This will compute a binary tree where index $0$ of the array is the root. Furthermore for a node at index $i$ you can find its parent using $\lfloor \frac{i - 1}{2} \rfloor$, its left child $2i + 1$ and its right child $2i + 2$ assuming they exists.
+    \begin{align*}
+      \mathbf{let} \: tree = create \: a_0
+    \end{align*}
+    \item To find the previous smaller or equal element of a value $v$ with index $i$. We will first find the common ancestor of the elements from $i$ some previous smaller or equal element that may exists. 
+    \begin{align*}
+      &\mathbf{let} \: ascent \: j = \\
+      &\quad \mathbf{if} \: j \neq 0 \land (left \: j \lor tree[sibling \: j] > v) \\
+      &\quad \mathbf{else} \: ascent \: (parent \: j) \\
+      &\quad \mathbf{then} \: j
+    \end{align*}
+    Here $left$ is a predicate that determines if $j$ is the index of a left node i.e. if it is odd. While $sibling$ determines the neighbouring node. Then compute the index $k = ascent \: (2^n + i)$, if $k = 0$ then the previous smaller or equal element does not exists.
+    \item Now descent to the right most element that is smaller or equal to $v$ and adjust for the offset.
+    \begin{align*}
+      &\mathbf{let} \: descent \: j = \\
+      &\quad \mathbf{if} \: j < 2^n \\
+      &\quad \mathbf{else} \: \mathbf{if} \: tree[2j + 2] \leq v \: \mathbf{then} \: descent \: (2j + 2) \: \mathbf{else} \: descent \: (2j + 1)\\
+      &\quad \mathbf{then} \: j - 2^n
+    \end{align*}
+  \end{enumerate}
+\end{algorithm}
+Note that the use of recursion can be easily rewritten to loops.
 
 \subsubsection{Grammar Extension}
 We will first need a precise definition of the grammar extension. This is needed to show it does not lead to fewer grammars being LLP or larger LLP tables. 
@@ -469,7 +542,7 @@ We will also need the following Lemma.
 \begin{proof}
   We know that $G$ and $G'$ produces the same language and due to them both being LL then there is only one way of deriving their leftmost derivations. It is also known that since $A$ is a nonterminal in $G$ then it must not be a $A_t$ nonterminal in $G'$ else they would not share a common terminal string $w$. So the derivation of $A'$ must use a production of the form $A' \to \alpha[A_{t_1}/t_1, \dots A_{t_n}/t_1] \in P_r$ where $A \to \alpha \in P$. Then we know that when the single derivation on $A'$ is performed then not a single $A_t$ nonterminal in $\gamma'$ has been derived to its terminal $t$. Therefore it must be the case that $\gamma = \gamma'[A_{t_1}/t_1, \dots A_{t_n}/t_n]$. Likewise $A'$ has just been derived so no $A_t$ nonterminals have been derived meaning $\gamma' = \gamma[t_1/A_{t_1}, \dots t_n/A_{t_n}]$.
 \end{proof}
-Now we will be able to show what we wanted to show.
+\noindent Now we will be able to show what we wanted to show.
 \begin{proof}
   The proof will be done by showing that given a LLP grammar $G$ i.e. for any admissible pair $(x, y)$ we have $|\PSLS(x, y)| = 1$. Then it will follow that for its corresponding extended grammar $G'$ we must also have $|\PSLS(x, y)| = 1$.
   \begin{itemize}
@@ -506,7 +579,17 @@ Now we will be able to show what we wanted to show.
 
 \section{Implementation}
 \subsection{Tokenization}
-The implementation of tokenization is done by a variation of \ref{prop:closure}. We do not have to do fixed point iteration on alle of the endofunctions but only endofuctions that are neighbouring eachother. Then when you compose two transitions then you would need to add them as new transitions. So if you had the following pattern you wanted to match $abc$ then $a$ is a neighbor to $b$ and $b$ is a neighbor to $c$. So initially we have a set of endofunctions.
+To implement tokenization we run into the problem that we want to represent an partially aplied delta function in Futhark. Futhark does not allow for represting functions as an array element. Even if it was possible then it might not be the most efficient representation. Instead if everyone of of states in the DFA is assigned a unique number then we could represent it as an array. So \texttt{delta[i] = j} would mean the partially applied function \texttt{delta} maps \texttt{i} to \texttt{j}. We could then also compose this function like so.
+\begin{lstlisting}{language=futhark,numbers=none}
+  let compose a b = map(\i -> a[i]) b
+\end{lstlisting}
+This was at some time the implementation of alpacc but it is possible to go faster. You can enumerate every composed partially applied delta function and create a table of compositions. Then your function composition would become.
+\begin{lstlisting}{language=futhark,numbers=none}
+  let compose a b = composition_table[a, b]
+\end{lstlisting}
+The way you would then enumerate every composed partially applied delta function is by first constructing the set of such functions and then assign each some number. A way to construct this set is by Proposition \ref{prop:closure}. You would just have to keep track of the composed PDAFs used to construct each composed PDAF to make a table. Something one might notice is it is actually computationally wasteful since transitions and subpaths that are not neighbouring will result in a valid path in the DFA. So as an alternative one could only compose the composed PADF that are neighbouring eachother. Then when you compose two transitions then you would need to add them as new transitions. Then forall the composed PADFs found you would have to define a dead composed PADF. It can then be used when some composition of existing composed PADFs are not defined in the table.
+
+So if you had the following pattern you wanted to match $abc$ then $a$ is a neighbor to $b$ and $b$ is a neighbor to $c$. So initially we have a set of PADFs.
 \begin{align*}
   \{\delta(a), \delta(b), \delta(c)\}
 \end{align*}
@@ -514,11 +597,30 @@ Then we compose both $\delta(a)$ with $\delta(b)$ and $\delta(b)$ with $\delta(c
 \begin{align*}
   \{\delta(a), \delta(b), \delta(c)\} \cup \{\delta(a) \circ \delta(b), \delta(b) \circ \delta(c)\}
 \end{align*}
-Now $\delta(a) \circ \delta(b)$ is composed with $\delta(c)$ and $\delta(a)$ is composed with $\delta(b) \circ \delta(c)$. The set of these compositions are then unioned with the old set.
+Now $\delta(a) \circ \delta(b)$ is composed with $\delta(c)$ and $\delta(a)$ is composed with $\delta(b) \circ \delta(c)$. Here both $\delta(a) \circ \delta(b)$ and $\delta(b) \circ \delta(c)$ are recomputed. The set of these compositions are then unioned with the old set.
 \begin{align*}
   \{\delta(a), \delta(b), \delta(c), \delta(a) \circ \delta(b), \delta(b) \circ \delta(c)\} \cup \{\delta(a) \circ \delta(b) \circ \delta(c)\}
 \end{align*}
-This ends up being the final set.
+This ends up being the final set. This can also be done on the set of compositions that were made safe. Also note this is not the best method of generating the composition table.  A possible improvement could be to depth-first search traversal the whole DFA and keep track of a set of composed PADFs up to the the given node in the traversal. Then keep checking if the new composition is in the current table, if all new compositions are visited then go back in the so called DFS manner.
+
+\section{Testing}
+\subsection{Tokenization}
+\subsubsection{General Testing}
+To test the tokenization it is compared with a sequential version. The sequential version works much like the data-parallel version. It will traverse the DFA until it reaches a dead state. Afterwards it will determine if the previous state was accepting if so then reset the traversal else the input could not be tokenized.
+
+The testing strategy is then to choose some set of patterns and and strings of interest. Then compare if the sequence of tokens with their spans are the same. One of the set of patterns that was deemed interesting are the one given in Example \ref{ex:overlap}.
+\begin{align*}
+  \tau_1 = a(a \qquad \tau_2 = a\text{+} \qquad \tau_3 = a)a \qquad \tau_4 = \backslash s|\backslash n |\backslash t | \backslash r
+\end{align*}
+Here something like $a(aa)a$ can get recongnized while $a(aaa)a$ can not get recongnized. This test is to make sure concat, alternation, and the one-or-more pattern works as expected. This is tested multiple times using other test cases also. What is more important, it also assures that $a(aaa)a$ will fail. Another pattern of interest is.
+\begin{align*}
+  \tau_1 = \mathbf{if} \qquad \tau_2 = \mathbf{then} \qquad \tau_3 = \mathbf{else} \qquad \tau_4 = [a\text{-}z]+ \qquad \tau_5 = \backslash s|\backslash n |\backslash t | \backslash r
+\end{align*}
+Here we want the key words $\mathbf{if}$, $\mathbf{then}$, and $\mathbf{else}$ to be associated with a token before it is associated with $\tau_4$. Here the order the tokens are defined are the order they are prioritized from most important to least. There were also some other interesting patterns and inputs but these examples gives a good idea of cases tested for. \footnote{The different cases tested for can be found \href{https://github.com/diku-dk/alpacc/tree/20b98004bb18bfd7d8031ffaf053f382f821889a/futhark-tests/lexer-tests}{here}.}
+
+A problems with this method of testing is it is limited to single examples and what properties the author finds to be interesting. There might be edge cases that were missed and not accounted for since they did not seem to be of interest.
+\subsubsection{Large LISP Input}
+Since the general testing is only on small inputs of the DFA it would also be good to test on large randomized inputs. This would give greater confidence in the lexer generator works as expected. This is done by a LISP lexer is compared with a LISP lexer made with the Logos lexer library. Here a large randomized input that could be tokenized by a LISP lexer is created randomly.
 
 \section{Conclusion}
 Conclusion.
