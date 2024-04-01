@@ -151,9 +151,8 @@
 
 \section{Theory}
 Hills paper ``Parallel lexical analysis and parsing on the AMT
-distributed array processor'' \cite{HILL1992699} describes a method to obtain the path in a deterministic finite automata given a input string. This section will describe the theory of this method and extend the it for tokenization.
+distributed array processor'' \cite{HILL1992699} describes a method to obtain the path in a deterministic finite automata (DFA) given a input string. It does not describe how to create such a DFA but it describes how to simulate it in a work-efficient data-parallel manner. This section will describe the theory of this method and describe a method of using it for tokenization.
 
-% I should probably mention that pareas also uses this paper and does tokenization but I have no idea how they do it.
 \subsection{Data-parallel Lexical Analysis}
 \subsubsection{Data-parallel DFA Traversal}
 To explain the theory of parallel lexical analysis we first remind the reader of the definition of a deterministic finite automaton.
@@ -323,7 +322,7 @@ We know if $i = n - 1$ then it must be the last state of the last path. The seco
 
 Step 5-7. will first keep every last state by this predicate. Afterwards it is asserted that the last state $s \in F$. Only the last state of the last path is needed since all previous path would had been valid else it would had not been reset by composition being safe. Finally just map every state to the token it has.
 
-\begin{example}[Problem with this method]\label{ex:overlap}
+\begin{example}[Problems with this method]\label{ex:overlap}
   If we had the following three patterns.
   \begin{align*}
     \tau_1 = a(a \qquad \tau_2 = a\text{+} \qquad \tau_3 = a)a
@@ -334,6 +333,8 @@ Step 5-7. will first keep every last state by this predicate. Afterwards it is a
   \end{align*}
   The token sequence of this input could be determined to be $\tau_1, \tau_2, \tau_3$ with spans $(0, 3), (3, 4), (4, 7)$ if you reset at the last acceptings state. But since the algorithm resets at the last state from an accepting state then it fails. Meaning it would be able to recongnize $\tau_1$. The problem is at the token $\tau_2$ would get the span $(3, 5)$ and then the algorithm would not recongnize any token with the pattern $)a$.
 \end{example}
+\noindent There exists an alternative to this method given in Robin Voetters masterthesis \cite[13-16]{voetter2021}. This is done by constructing a NFA for each tokens regular expression pattern. Then create a new NFA where there is an epsilon transition from the initial state to every tokens NFAs inital state. Then you would convert this NFA into a DFA where you would have a function $\mathcal{T}$ which maps final state to a token. Then for every outgoing transition $\delta(q_0, t) = q$ of the DFA then we add a transition from a final state $q_s \in F$ such that if $(q_s, t) \notin \text{dom}(\delta)$ then $\delta(q_s, t) = q$. If any of these new transitions are visited during the traversal of the DFA then a token is produced. We also have to account for the first transition visited which also will be a producing a token.
+
 \subsection{Concrete Syntax Trees}
 The alpacc parser generator is a parser generator which creates parser for the LLP grammer class. The LLP parsers described in the LLP parsing paper \cite{Vagner2007} only touches upon the verification and production sequence construction of parsing not the creation of concrete the syntax tree. This would also had to be done in a data-parallel manner else we would run into a bottle-neck. A method for this is described in Voetters master thesis \cite[32-33]{voetter2021} about compilation on the GPU. Here it is described how to create a concrete syntax tree using the representation from Hsu PhD dissertation \cite[77-81]{hsu2019} where you have a parent that can be used for multiple transformations of a syntax tree. The representation of the tree will be an array of nodes where each node has the index to its parent node. The nodes will also be given in a preorder traversal of the tree. This kind of representation is much more fit for data parallelism than som recursive datatype.
 
@@ -574,7 +575,7 @@ We will also need the following Lemma.
     
     We would now need to show that $B_a'$ would exist in the first set of the PSLS definition since it cannot exist in the second set. We see the derivation is of the same form as a derivation as in the first set. We also see the shortest prefix $\alpha'$ of $B_a'\gamma'$ is such that $(y, \alpha', ()) \vdash^* (y', \varepsilon, \pi')$ is $B_a'$. By $a = \text{FIRST}^{G'}_1(B_a') = \alpha'$ then $\alpha'$ is the only such prefix.
   \end{itemize}
-  Thereby the extended grammar is also LLP and since the bijection grammar and its exnteded version then we know the $\PSLS$ table does not get larger.
+  Thereby the extended grammar is also LLP and since the bijection grammar and its extended version then we know the $\PSLS$ table does not get larger.
 \end{proof}
 
 \section{Implementation}
@@ -587,7 +588,7 @@ This was at some time the implementation of alpacc but it is possible to go fast
 \begin{lstlisting}{language=futhark,numbers=none}
   let compose a b = composition_table[a, b]
 \end{lstlisting}
-The way you would then enumerate every composed partially applied delta function is by first constructing the set of such functions and then assign each some number. A way to construct this set is by Proposition \ref{prop:closure}. You would just have to keep track of the composed PDAFs used to construct each composed PDAF to make a table. Something one might notice is it is actually computationally wasteful since transitions and subpaths that are not neighbouring will result in a valid path in the DFA. So as an alternative one could only compose the composed PADF that are neighbouring eachother. Then when you compose two transitions then you would need to add them as new transitions. Then forall the composed PADFs found you would have to define a dead composed PADF. It can then be used when some composition of existing composed PADFs are not defined in the table.
+The way you would then enumerate every composed partially applied delta function is by first constructing the set of such functions and then assign each some number. A way to construct this set is by Proposition \ref{prop:closure}. You would just have to keep track of the composed PADFs used to construct each composed PADF to make a table. Something one might notice is it is actually computationally wasteful since transitions and subpaths that are not neighbouring will result in a valid path in the DFA. So as an alternative one could only compose the composed PADF that are neighbouring eachother. Then when you compose two transitions then you would need to add them as new transitions. Then forall the composed PADFs found you would have to define a dead composed PADF. It can then be used when some composition of existing composed PADFs are not defined in the table.
 
 So if you had the following pattern you wanted to match $abc$ then $a$ is a neighbor to $b$ and $b$ is a neighbor to $c$. So initially we have a set of PADFs.
 \begin{align*}
@@ -601,7 +602,7 @@ Now $\delta(a) \circ \delta(b)$ is composed with $\delta(c)$ and $\delta(a)$ is 
 \begin{align*}
   \{\delta(a), \delta(b), \delta(c), \delta(a) \circ \delta(b), \delta(b) \circ \delta(c)\} \cup \{\delta(a) \circ \delta(b) \circ \delta(c)\}
 \end{align*}
-This ends up being the final set. This can also be done on the set of compositions that were made safe. Also note this is not the best method of generating the composition table.  A possible improvement could be to depth-first search traversal the whole DFA and keep track of a set of composed PADFs up to the the given node in the traversal. Then keep checking if the new composition is in the current table, if all new compositions are visited then go back in the so called DFS manner.
+This ends up being the final set. This can also be done on the set of compositions that were made safe. Currently this implementation is extremely slow, it does some recomputations which could be mitigated using memoization or removing connections that have been computed before.
 
 \section{Testing}
 \subsection{Tokenization}
@@ -621,6 +622,15 @@ Here we want the key words $\mathbf{if}$, $\mathbf{then}$, and $\mathbf{else}$ t
 A problems with this method of testing is it is limited to single examples and what properties the author finds to be interesting. There might be edge cases that were missed and not accounted for since they did not seem to be of interest.
 \subsubsection{Large LISP Input}
 Since the general testing is only on small inputs of the DFA it would also be good to test on large randomized inputs. This would give greater confidence in the lexer generator works as expected. This is done by a LISP lexer is compared with a LISP lexer made with the Logos lexer library. Here a large randomized input that could be tokenized by a LISP lexer is created randomly.
+
+\subsection{Parent Vector}
+To assert the correctness of the parent vector construction the algorithm for finding the previous equal or smaller element is tested. The reason for only testing this is the steps 1-3. in algorithm \ref{algo:parent} do offer much complexity. A problem with this testing method is it assumes the correctness of the parent vector algorithm. Also something to consider is why not testing that the concrete syntax trees correspond to a sequential version. This is because the parent vector is the last step in testing since the production sequence is already tested in Alpacc \cite{due2023}.
+
+The strategy for testing is using property based testing. This is done by property based testing. The property tested for is given an array $a$ of 32-bit integers then $f$ maps algorithm \ref{algo:psee} over $a$. Then the result of $f(a)$ should be the same as if $g$. Here $g$ is an implementation that for every element in the the array does a backwards linear search to find the previous smaller or equal element. Then the follow property should be fulfilled.
+\begin{align*}
+  \forall a. f(a) = g(a)
+\end{align*}
+Since not all $a$ can be tested then $a$ is randomized a given amount of times. Also note if the previous or smaller element does not exists then $f$ and $g$ will map to $-1$.
 
 \section{Conclusion}
 Conclusion.
