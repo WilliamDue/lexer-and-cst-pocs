@@ -1,0 +1,89 @@
+$ make INPUT_SIZE="10485760" bench
+Lisp Lexer Benchmark:
+Rust implementation:
+Time elapsed: 44866μs
+C implementation:
+Time elapsed: 24440μs
+Futhark implementation:
+Time elapsed: 3388μs
+
+$ make INPUT_SIZE="20971520" bench
+Lisp Lexer Benchmark:
+Rust implementation:
+Time elapsed: 86898μs
+C implementation:
+Time elapsed: 47876μs
+Futhark implementation:
+Time elapsed: 6960μs
+
+$ make INPUT_SIZE="31457280" bench
+Lisp Lexer Benchmark:
+Rust implementation:
+Time elapsed: 131183μs
+C implementation:
+Time elapsed: 70986μs
+Futhark implementation:
+Time elapsed: 10667μs
+
+$ make INPUT_SIZE="41943040" bench
+Lisp Lexer Benchmark:
+Rust implementation:
+Time elapsed: 180367μs
+C implementation:
+Time elapsed: 98906μs
+Futhark implementation:
+Time elapsed: 14400μs
+
+$ make INPUT_SIZE="52428800" bench
+Lisp Lexer Benchmark:
+Rust implementation:
+Time elapsed: 214258μs
+C implementation:
+Time elapsed: 118350μs
+Futhark implementation:
+Time elapsed: 17744μs
+
+$ make INPUT_SIZE="62914560" bench
+Lisp Lexer Benchmark:
+Rust implementation:
+Time elapsed: 274776μs
+C implementation:
+Time elapsed: 148982μs
+Futhark implementation:
+Time elapsed: 23108μs
+
+$ make INPUT_SIZE="73400320" bench
+Lisp Lexer Benchmark:
+Rust implementation:
+Time elapsed: 330414μs
+C implementation:
+Time elapsed: 175402μs
+Futhark implementation:
+Time elapsed: 26358μs
+
+$ make INPUT_SIZE="83886080" bench
+Lisp Lexer Benchmark:
+Rust implementation:
+Time elapsed: 370787μs
+C implementation:
+Time elapsed: 200867μs
+Futhark implementation:
+Time elapsed: 30512μs
+
+$ make INPUT_SIZE="94371840" bench
+Lisp Lexer Benchmark:
+Rust implementation:
+Time elapsed: 430997μs
+C implementation:
+Time elapsed: 234474μs
+Futhark implementation:
+Time elapsed: 34591μs
+
+$ make INPUT_SIZE="104857600" bench
+Lisp Lexer Benchmark:
+Rust implementation:
+Time elapsed: 469772μs
+C implementation:
+Time elapsed: 248722μs
+Futhark implementation:
+Time elapsed: 39199μs

@@ -131,7 +131,8 @@
     {\large Computer Science Department} \\[10pt]
     {\Large Data-Parallel Compilation} \\[4pt]
     {\large Lexical analysis \& Syntax Tree Construction} \\[10pt]
-    William Henrich Due (mcj284)  \\[0pt]
+    Author: William Henrich Due (mcj284) \\[0pt]
+    Advisor: Troels Henriksen \\[0pt]
     Submitted: 5th of April 2024
 }
 \author{}
@@ -141,7 +142,7 @@
 \maketitle
 \thispagestyle{firstpage}
 \begin{abstract}
-    A detailed 
+    \noindent The theory of a lexer generator creating data-parallel lexers is presented. Such a lexer generator is implemented and used to create a Lisp lexer which performance is measured. Futhermore a description of how to extend an LLP parser generator such that it can construct concrete syntax trees is given. This is also implemented together with the lexer generator as part of Alpacc\footnote{\href{https://github.com/diku-dk/alpacc}{https://github.com/diku-dk/alpacc}}.
 \end{abstract}
 
 \tableofcontents
@@ -151,13 +152,13 @@
 
 \section{Theory}
 Hills paper ``Parallel lexical analysis and parsing on the AMT
-distributed array processor'' \cite{HILL1992699} describes a method to obtain the path in a deterministic finite automata (DFA) given a input string. It does not describe how to create such a DFA but it describes how to simulate it in a work-efficient data-parallel manner. This section will describe the theory of this method and describe a method of using it for tokenization.
+distributed array processor'' \cite{HILL1992699} describes a method to obtain the path in a deterministic finite automaton (DFA) given a input string. It does not describe how to create such a DFA but it describes how to simulate it in a work-efficient data-parallel manner. This section will describe the theory of this method and describe a method of using it for tokenization.
 
 \subsection{Data-parallel Lexical Analysis}
 \subsubsection{Data-parallel DFA Traversal}
 To explain the theory of parallel lexical analysis we first remind the reader of the definition of a deterministic finite automaton.
 \begin{definition}[DFA]
-  A deterministic finite automata \cite{10.5555/1196416} \cite{enwiki:1192025610} is given by a 5-tuple $(Q, \Sigma, \delta, q_0, F)$ where.
+  A deterministic finite automaton \cite{10.5555/1196416} \cite{enwiki:1192025610} is given by a 5-tuple $(Q, \Sigma, \delta, q_0, F)$ where.
   \begin{enumerate}
     \item $Q$ is the set of states where $|Q| < \infty$.
     \item $\Sigma$ is the set of symbols where $|\Sigma| < \infty$.
@@ -336,7 +337,7 @@ Step 5-7. will first keep every last state by this predicate. Afterwards it is a
 \noindent There exists an alternative to this method given in Robin Voetters masterthesis \cite[13-16]{voetter2021}. This is done by constructing a NFA for each tokens regular expression pattern. Then create a new NFA where there is an epsilon transition from the initial state to every tokens NFAs inital state. Then you would convert this NFA into a DFA where you would have a function $\mathcal{T}$ which maps final state to a token. Then for every outgoing transition $\delta(q_0, t) = q$ of the DFA then we add a transition from a final state $q_s \in F$ such that if $(q_s, t) \notin \text{dom}(\delta)$ then $\delta(q_s, t) = q$. If any of these new transitions are visited during the traversal of the DFA then a token is produced. We also have to account for the first transition visited which also will be a producing a token.
 
 \subsection{Concrete Syntax Trees}
-The alpacc parser generator is a parser generator which creates parser for the LLP grammer class. The LLP parsers described in the LLP parsing paper \cite{Vagner2007} only touches upon the verification and production sequence construction of parsing not the creation of concrete the syntax tree. This would also had to be done in a data-parallel manner else we would run into a bottle-neck. A method for this is described in Voetters master thesis \cite[32-33]{voetter2021} about compilation on the GPU. Here it is described how to create a concrete syntax tree using the representation from Hsu PhD dissertation \cite[77-81]{hsu2019} where you have a parent that can be used for multiple transformations of a syntax tree. The representation of the tree will be an array of nodes where each node has the index to its parent node. The nodes will also be given in a preorder traversal of the tree. This kind of representation is much more fit for data parallelism than som recursive datatype.
+The alpacc parser generator is a parser generator which creates parser for the LLP grammer class. The LLP parsers described in the LLP parsing paper \cite{Vagner2007} only touches upon the verification and production sequence construction of parsing not the creation of concrete the syntax tree. This would also had to be done in a data-parallel manner else we would run into a bottle-neck. A method for this is described in Voetters master thesis \cite[32-33]{voetter2021} about compilation on the GPU. Here it is described how to create a concrete syntax tree using the representation from Hsu PhD dissertation \cite[77-81]{hsu2019} where you have a parent that can be used for multiple transformations of a syntax tree. The representation of the tree will be an array of nodes where each node has the index to its parent node. The nodes will also be given in a preorder traversal of the tree. This kind of representation is much more fit for data parallelism than some recursive datatype.
 
 \subsubsection{Concrete Syntax Tree Construction}
 So as an example we wish to construct syntax tree for the grammar.
@@ -604,7 +605,7 @@ Now $\delta(a) \circ \delta(b)$ is composed with $\delta(c)$ and $\delta(a)$ is 
 \end{align*}
 This ends up being the final set. This can also be done on the set of compositions that were made safe. Currently this implementation is extremely slow, it does some recomputations which could be mitigated using memoization or removing connections that have been computed before.
 
-\section{Testing}
+\section{Tests}
 \subsection{Tokenization}
 \subsubsection{General Testing}
 To test the tokenization it is compared with a sequential version. The sequential version works much like the data-parallel version. It will traverse the DFA until it reaches a dead state. Afterwards it will determine if the previous state was accepting if so then reset the traversal else the input could not be tokenized.
@@ -632,6 +633,56 @@ The strategy for testing is using property based testing. This is done by proper
 \end{align*}
 Since not all $a$ can be tested then $a$ is randomized a given amount of times. Also note if the previous or smaller element does not exists then $f$ and $g$ will map to $-1$.
 
+\section{Benchmarks}
+\subsection{Lisp lexer}
+To assert the performance of a data-parallel some benchmarks of Lisp lexers are compared. These Lisp lexers understand the following tokens patterns.
+\begin{align*}
+  \tau_1 = \: ( \qquad \tau_2 = \: \:) \qquad \tau_3 = [a\text{-}zA\text{-}Z0\text{-}9]+ \qquad \tau_4 = (\backslash s|\backslash n |\backslash t | \backslash r)+
+\end{align*}
+Here $\tau_1$ and $\tau_2$ are the open and closing parenthesis in S-expressions. $\tau_3$ are the atoms while $\tau_4$ is the spacing between the important tokens for the grammar $\tau_1$, $\tau_2$, and $\tau_3$.
+
+The benchmarks are of three lexers in different languages and described below
+\begin{itemize}
+  \item Rust: A lexer made with the Logos library which saves every token in memory which must be done for the data-parallel lexer.
+  \item C: A lexer written by Troels Henriksen. 
+  \item Futhark: A data-parallel lexer from Alpacc \cite{due2023} using the method described.
+\end{itemize}
+The benchmarks are measured using a Ryzen 5 1600x CPU and a Nvidia RTX 3060 GPU. Which may not seem like a fair comparison since the CPU was released in 2017 and the GPU was released in 2021.\footnote{When taking these benchmarks I did not have access to other hardware since I could not get on the university VPN to access the compute cluster Hendrix.} We will just have to assume this is comparable since single threaded performance has stalled the past 10 years.
+
+\begin{table}[H]
+  \centering
+  \begin{tabular}{c|c|c|c}
+    Input Size (MiB) & Rust ($\mu s$) & C ($\mu s$) & Futhark ($\mu$s) \\ \hline
+    10 & 44,866 & 24,440 & 3,388 \\
+    20 & 86,898 & 47,876 & 6,960 \\
+    30 & 131,183 & 70,986 & 10,667 \\
+    40 & 180,367 & 98,906 & 14,400 \\
+    50 & 214,258 & 118,350 & 17,744 \\
+    60 & 274,776 & 148,982 & 23,108 \\
+    70 & 330,414 & 175,402 & 26,358 \\
+    80 & 370,787 & 200,867 & 30,512 \\
+    90 & 430,997 & 234,474 & 34,591 \\
+    100 & 469,772 & 248,722 & 39,199
+  \end{tabular}
+  \caption{Lisp Lexer Benchmarks}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{plot.png}
+  \caption{Lisp Lexer Benchmarks}
+\end{figure}
+\noindent As we see from the plot the times grows roughly linearly with the input size for all the benchmarks. So we can use the linear equations found to solve for each lexers throughput in GiB/s.
+\begin{table}[H]
+  \centering
+  \begin{tabular}{c|c|c|c}
+     & Rust ($\mu s$) & C ($\mu s$) & Futhark ($\mu$s) \\ \hline
+    Througput (GiB/s) & 0.2 & 0.4 & 2.5 \\
+  \end{tabular}
+  \caption{Lisp Lexers Throughput}
+\end{table}
+
+\section{Discussion}
 \section{Conclusion}
 Conclusion.
 \printbibliography

@@ -4,3 +4,6 @@
 !*.tex
 !*.bib
 !.gitignore
+!*.txt
+!*.py
+!*.png
