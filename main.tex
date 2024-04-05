@@ -130,7 +130,7 @@
     {\Large \textsc{University of Copenhagen}} \\[0pt]
     {\large Computer Science Department} \\[10pt]
     {\Large Data-Parallel Compilation} \\[4pt]
-    {\large Lexical analysis \& Syntax Tree Construction} \\[10pt]
+    {\large Lexical Analysis \& Syntax Tree Construction} \\[10pt]
     Author: William Henrich Due (mcj284) \\[0pt]
     Advisor: Troels Henriksen \\[0pt]
     Submitted: 5th of April 2024
@@ -142,21 +142,25 @@
 \maketitle
 \thispagestyle{firstpage}
 \begin{abstract}
-    \noindent The theory of a lexer generator creating data-parallel lexers is presented. Such a lexer generator is implemented and used to create a Lisp lexer which performance is compared with other Lisp lexers. Futhermore a description of how to extend an LLP parser generator such that it can construct concrete syntax trees is given. This is also implemented together with the lexer generator as part of Alpacc\footnote{\href{https://github.com/diku-dk/alpacc}{https://github.com/diku-dk/alpacc}}.
+    \noindent The theory of a lexer generator which creates data-parallel lexers is presented. Such a generator is implemented and used to create a Lisp lexer which performance is compared with other Lisp lexers. Futhermore a description of how to extend an LLP parser generator such that it can construct concrete syntax trees is given. This is also implemented together with the lexer generator as part of Alpacc\footnote{\href{https://github.com/diku-dk/alpacc}{https://github.com/diku-dk/alpacc}}.
 \end{abstract}
 
 \tableofcontents
 
 \section{Introduction}
+Alpacc is a data-parallel parser generator which uses the LLP grammar class \cite{Vagner2007}. For this parser generator to actually be useful it would have to incorporate a lexer generator and construct a concrete syntax tree. If lexing or the tree construction was done sequentially then these algorithms would be a bottle-neck. This paper will describe in detail the theory of data-parallel lexing. This theory will be used to implement a data-parallel Lisp lexer which is benchmarked and compared with sequential Lisp lexer implementations.
 
+Also the description of a not work efficient algorithm for constructing a concrete syntax tree is explained in depth. The fact that this algorithm is not work efficient does not make it a reason to disregard it. This is because it only performs more work by a factor of $O(\log n)$.
+
+A problem that will also be solved is the LLP parser only produces a sequence of productions when parsing. We would want the parser to create an actual concrete syntax tree. This is done by extending a given grammar and it will be shown that this does not affect the grammars that can be parsed.
 
 \section{Theory}
 Hills paper ``Parallel lexical analysis and parsing on the AMT
-distributed array processor'' \cite{HILL1992699} describes a method to obtain the path in a deterministic finite automaton (DFA) given a input string. It does not describe how to create such a DFA but it describes how to simulate it in a work-efficient data-parallel manner. This section will describe the theory of this method and describe a method of using it for tokenization.
+distributed array processor'' \cite{HILL1992699} describes a method to obtain the path in a deterministic finite automaton (DFA) given a input string in $O(n)$ work and $O(\log n)$ span. It does not describe how to create such a DFA for tokenization but it describes how to simulate it in a work-efficient manner. This section will describe the theory of this method and describe how it can be used for tokenization.
 
 \subsection{Data-parallel Lexical Analysis}
 \subsubsection{Data-parallel DFA Traversal}
-To explain the theory of parallel lexical analysis we first remind the reader of the definition of a deterministic finite automaton.
+To explain the theory of parallel lexical analysis we first remind the reader of a deterministic finite automaton.
 \begin{definition}[DFA]
   A deterministic finite automaton \cite{10.5555/1196416} \cite{enwiki:1192025610} is given by a 5-tuple $(Q, \Sigma, \delta, q_0, F)$ where.
   \begin{enumerate}
@@ -175,13 +179,13 @@ To explain the theory of parallel lexical analysis we first remind the reader of
   \end{align*}
   If a DFA is total we may use a curried transition function $\delta: \Sigma \to Q \to Q$.
 \end{definition}
-\noindent This is needed since else the the function would not be fully defined in the domains $\Sigma$ and $Q$.
+\noindent This is needed since otherwise the function would not be defined in the domains $\Sigma$ and $Q$.
 
-The reason for doing so is because if we have any two functions $g = \delta(a)$ and $f = \delta(a')$ then it follows from composition that.
+The reason for allowing $\delta$ to be curried is if we have any two functions $g = \delta(a)$ and $f = \delta(a')$ then it follows from composition that.
 \begin{align*}
   g(f(q)) = (g \circ f) (q)
 \end{align*}
-This allows for an alternative way of determining if a string can be produced by an DFA. Instead of first evaluating $f(q)$, then $g(f(q))$ and then checking if this state is a member of $F$. We could instead partially apply $\delta$ to the symbols and then compose them to a single function which could be used to determine if a string is valid. This sets the stage for data-parallel lexing, we want to find a way to make the problem into a \texttt{map-reduce}. We want to do this because it can be computed using a data-parallel implementation unlike the normal way of traversing a DFA.
+This allows for an alternative way of determining if a string can be produced by an DFA. Instead of first evaluating $f(q)$ and then $g(f(q))$ and then checking if this state is a member of $F$. We could instead partially apply $\delta$ to the symbols and then compose them to a single function which could be used to determine if a string is valid. This sets the stage for data-parallel lexing, we want to find a way to make the problem into a \texttt{map-reduce}. We want to do this because it can be computed using a data-parallel reduce unlike the normal way of traversing a DFA.
 
 For the ability to use a data-parallel \texttt{map-reduce} we must have a monoidal structure. Here $\Delta$ is the set of all the composed partially applied delta functions needs to be closed under function composition.
 \begin{remark}
@@ -196,7 +200,7 @@ For the ability to use a data-parallel \texttt{map-reduce} we must have a monoid
   \end{align*}
 \end{proposition}
 \begin{proof}
-  We will circt by showing that a solution $\Delta$ exists. First note that the cardinality is monotonically increasing i.e. $\Delta_i \subseteq \Delta_{i + 1}$ since $\Delta_{i + 1}$ is a union of $\Delta_i$ and another set. Secondly note that since $|Q| < \infty$ then a finite amount of functions of the form $Q \to Q$ can exists. Since the set is bounded and increasing then at some point $\Delta_i = \Delta_{i + 1}$ and the smallest $i$ where it holds is the solution $\Delta$.
+  We will start by showing that a solution $\Delta$ exists. First note that the cardinality is monotonically increasing i.e. $\Delta_i \subseteq \Delta_{i + 1}$ since $\Delta_{i + 1}$ is a union of $\Delta_i$ and another set. Secondly note that since $|Q| < \infty$ then a finite amount of functions of the form $Q \to Q$ can exists. Since the set is bounded and increasing then at some point $\Delta_i = \Delta_{i + 1}$ and the smallest $i$ where it holds is the solution $\Delta$.
 
   For $\Delta$ to be closed under composition, then for arbitray $f, g \in \Delta$ it must hold that $f \circ g \in \Delta$. Since $\Delta_1$ is the set of PADFs that contructs $\Delta$ and composition is associative then all elements of $\Delta$ can be expressed of the form.
   \begin{align*}
@@ -206,13 +210,13 @@ For the ability to use a data-parallel \texttt{map-reduce} we must have a monoid
   \begin{align*}
     \delta(a_1), \dots, \delta(a_n)
   \end{align*}
-  So we would have a surjective map from sequences to $\Delta$, since some seuqences would map to the same composed PADF. So if all permutations with replacement of $\Delta_1$ of any sequence length are members of $\Delta$ then $\Delta$ would be closed under composition. Futhermore, since it was shown that $\Delta$ is finite so the sequences at some point $\Delta_i = \Delta_{i + 1}$ would only add new sequences but no new composed PADFs. Therefore it suffices to show that if all sequences of length $k$ where $1 \leq k \leq i$ is a subset of $\Delta_i$ then $\Delta$ is closed under composition. This can be shown using a proof by induction.
+  So we would have a surjective map from sequences to $\Delta$, since some seuqences would map to the same composed PADF. So if all permutations with replacement of $\Delta_1$ of any sequence length are members of $\Delta$ then $\Delta$ would be closed under composition. Futhermore, since it was shown that $\Delta$ is finite then at some point $\Delta_i = \Delta_{i + 1}$ then no new composed PADFs be added. Therefore it suffices to show that if all sequences of length $k$ where $1 \leq k \leq i$ is a subset of $\Delta_i$ then $\Delta$ is closed under composition. This can be shown using a proof by induction.
 
   Base: $\Delta_1$ trivially holds since it only contains sequences of length one and they are the initial PADFs.
 
-  Step: Given $\Delta_i$ contains every sequence of length $i$ or less then we to show this implies that $\Delta_{i + 1}$ will contain every sequence of length $i + 1$ or less.
+  Step: Given $\Delta_i$ contains every sequence of length $i$ or less then we need to show this implies that $\Delta_{i + 1}$ will contain every sequence of length $i + 1$ or less.
 
-  By the induction hypothesis $\Delta_{i + 1}$ must contain every sequence of length $i$ or less due to $\Delta_i \subseteq \Delta_{i + 1}$. It remains to show that every sequence of length $i + 1$ is a member of $\Delta_{i + 1}$. It is known that a direct product of $\Delta_i$ is used in the definition of $\Delta_{i + 1}$ so $\{f \circ g : f, g \in \Delta_i\} \subseteq \Delta_{i + 1}$. A direct product between sequences of length $1$ and $i$ will create every sequence of length $i + 1$ and therefore every sequence of length $i + 1$ is a member of $\Delta_{i + 1}$. Thereby $\Delta$ is closed under composition.
+  By the induction hypothesis $\Delta_{i}$ must contain every sequence of length $i$ or less and so must $\Delta_{i + 1}$ due to $\Delta_i \subseteq \Delta_{i + 1}$. It remains to show that every sequence of length $i + 1$ is a member of $\Delta_{i + 1}$. It is known that a direct product of $\Delta_i$ is used in the definition of $\Delta_{i + 1}$ so $\{f \circ g : f, g \in \Delta_i\} \subseteq \Delta_{i + 1}$. A direct product between sequences of length $1$ and $i$ will create every sequence of length $i + 1$ and therefore every sequence of length $i + 1$ is a member of $\Delta_{i + 1}$. Thereby $\Delta$ is closed under composition.
 \end{proof}
 \noindent Now since $\Delta$ is closed under composition then it follows that $\Delta$ and function composition induces a monoidal structure.
 
@@ -235,7 +239,7 @@ For the ability to use a data-parallel \texttt{map-reduce} we must have a monoid
 \end{algorithm}
 
 \subsubsection{Data-parallel Tokenization}
-For data-parallel tokenization we need to extent data-parallel algorithm \ref{algo:lex} will be needed to be extended. The idea will be to use a data-parallel \texttt{map-scan} instead since it will gives all the states. This is also the methods described in Hills \cite{HILL1992699} paper. The problem is we need to be able to recongnize the longest strech of symbols that results in a token. And we also need to restart the traversal of DFA if a final state is hit while no options to traverse further. To do so we first need af function to define a function to recongnize tokens.
+For data-parallel tokenization we need to extent algorithm \ref{algo:lex}. The idea will be to use a data-parallel \texttt{map-scan} instead since it will gives all the states. This is also the methods described in Hills \cite{HILL1992699} paper. The problem is we need to be able to recongnize the longest strech of symbols that results in a token. And we also need to restart the traversal of DFA if a final state is hit with no options to traverse further. To do so we first need to define a function to recongnize tokens.
 
 \begin{definition}[Token Function]
   Given a DFA and a set of tokens $T$. The token function $\mathcal{T}: F \to T$ is a function that maps accepting states to some token.
@@ -243,7 +247,7 @@ For data-parallel tokenization we need to extent data-parallel algorithm \ref{al
 \noindent We will also need a single state to point to which is the dead state. This will become useful when the DFA needs to be traversed multiple times. Since we will need to be able to recongnize when the end of a traversal is reached and we have to restart.
 
 \begin{definition}[Total DFA with a Dead State]
-  Given a DFA it is made total with a dead state by defining a new set of states $Q' = Q \cup \{q_{\bot}\}$ where $q_{\bot}$ is the dead state. Additionally a new transition function $\delta'$ is defined.
+  Given a DFA, it is made total with a dead state by defining a new set of states $Q' = Q \cup \{q_{\bot}\}$ where $q_{\bot}$ is the dead state. Additionally a new transition function $\delta'$ is defined.
   \begin{align*}
     \delta'(a, q) = \begin{cases}
       q_{\bot} &  (a, q) \notin \text{dom}(\delta) \\
@@ -264,7 +268,7 @@ For data-parallel tokenization we need to extent data-parallel algorithm \ref{al
   \end{align*}
 \end{definition}
 \noindent This definition will make every possible final state become the initial state. This forgets the final state but it allows for the traversal to continue. The forgetfulness is not a problem this can be solved by looking at the previous PADF. This puts a limit on the lexer which is it only allows for going back to the previous state if a dead state is hit.
-Using this and previous definitions can be put together to the following algorithm.
+Using this and the previous definitions we get the following algorithm.
 
 \begin{algorithm}[Data-parallel Tokenization]\label{algo:token}
   Given a total DFA with a dead state where $q_0 \notin F$ and a token function $\mathcal{T}: F \to T$. A string can be tokenized in $O(n)$ work and $O(\log n)$ span.
@@ -281,37 +285,37 @@ Using this and previous definitions can be put together to the following algorit
     \begin{align*}
       \mathbf{scan} \: (\circ) \: id \: y = z
     \end{align*}
-    \item Compute the actual state and determine weather it is an end state\footnote{If you were to also keep track of the index then the span of each token could also be found.}.
+    \item Compute the actual state and determine weather it is an end state\footnote{If you were to also keep track of the indices then the span of each token could also be found.}.
     \begin{align*}
       & \mathbf{let} \: f = \lambda i \to \\
       & \quad \mathbf{let} \: s = \mathbf{if} \: i = 0 \: \mathbf{then} \: x[i](q_0) \: \mathbf{else} \: (z[i - 1] \circ x[i])(q_0) \\
       & \quad \mathbf{in} \: (i = n - 1 \lor (z[i](q_0) = q_0 \land s \in F), s) \\
       & \mathbf{in} \: \mathbf{map} \: f \: (\mathbf{iota} \: n)
     \end{align*}
-    \item Remove every state that is not an ending state.
+    \item Remove every state that is not an ending state from the result in Step 4.
     \begin{align*}
       \mathbf{filter} \: (\lambda(b, s) \to b)
     \end{align*}
-    \item Assert that the ending state is an accepting state.
+    \item Assert that the last state is an accepting state of the result in step 5.
     \begin{align*}
        (\lambda(b, s) \to s \in F) \circ \mathbf{last}
     \end{align*}
-    \item Produce the token sequence.
+    \item Produce the token sequence by applying the following function to the result from step 5.
     \begin{align*}
       \mathbf{map} \: (\lambda(b, s) \to \mathcal{T}(s))
     \end{align*}
   \end{enumerate}
 \end{algorithm}
-\noindent We will give an explanation of why the algorithm produces an array of paths where each path starts in $q_0$ and is not included in the path. Knowing where these paths ends it can then be trivially used to construct the token sequence using the token function $\mathcal{T}$. We will also show that it can be correctly determine wether the DFA paths taken are correct.
+\noindent We will give an explanation of why the algorithm produces an array of paths. Here every path has the initial state $q_0$ and $q_0$ is not included in the resulting path.
 
-We know in step 1-2. every PADF is created and is made safe so we know at this point either it maps to some orignal states or some maps to $q_0$ because the composition are safe. At step 3. a prefix sum using function composition is computed of these composed safe PADFs. Which by Algorithm \ref{algo:lex} can give us all states traversed in the DFA. But due to $\oplus$ is used then an accepting state followed by an dead states will become the initial state $q_0$. This almost gives all the paths, since now when a final state in a path is reach it becomes the initial state and the traversal i restarted.
+We know in step 1-2. every PADF is created and is made safe so we know at this point either it maps to some orignal states or some maps to $q_0$ because the compositions are safe. At step 3. a prefix sum using function composition is computed of these  composed safe PADFs. Which by Algorithm \ref{algo:lex} can give us all states traversed in the DFA. But due to $\oplus$ is used then an accepting state followed by an dead states will become the initial state $q_0$. This almost gives all the paths but all final states becomes initial states.
 
-Then at step 4. the paths taken in the DFA from state $q_0$ is found. We know for a given state $s$ in a path it will can be one of these cases.
+Then at step 4. the paths taken in the DFA from state $q_0$ is found. We know for a given state $s$ in a path it can be one of these cases.
 \begin{itemize}
   \item If $i = 0$ then $x[i](q_0)$ will be the first state visited after $q_0$ by definition of the transition function.
-  \item If $i \neq 0$ then $s$ will be $(z[i - 1] \circ x[i])(q_0)$. $z[i - 1](q_0)$ could wrongly map to $q_0$ by definition of making the composition safe.
+  \item If $i \neq 0$ then $s$ will be $(z[i - 1] \circ x[i])(q_0)$. $z[i - 1](q_0)$ could possibly not map to its correct state and instead map to $q_0$.
   \begin{itemize}
-    \item If $z[i - 1](q_0)$ maps wrongly to $q_0$ then the traversal of the DFA will be reset and $(z[i - 1] \circ x[i])(q_0)$ will map to the correct state of a new path.
+    \item If $z[i - 1](q_0)$ maps to $q_0$ then the traversal of the DFA may have been reset and $(z[i - 1] \circ x[i])(q_0)$ will map to the correct state of a possibly new path.
     \item If $z[i - 1](q_0)$ maps to the correct state then $(z[i - 1] \circ x[i])(q_0)$ will also map to the correct state.
   \end{itemize}
 \end{itemize}
@@ -319,9 +323,9 @@ It can be determined where each path ends by the following predicate.
 \begin{align*}
   i = n - 1 \lor (z[i](q_0) = q_0 \land s \in F)
 \end{align*}
-We know if $i = n - 1$ then it must be the last state of the last path. The second case is if $z[i](q_0) = q_0$ and $s \in F$ holds. We know if $z[i](q_0) = q_0$ holds then it is possible a final state was mapped to $q_0$ by composition being safe. And if $s \in F$ then since $q_0 \notin F$ we know $z[i](q_0) \neq s$ meaning the reason $z[i](q_0) = q_0$ must be because of a reset by composition being safe meaning then it must be a final state in a path that is not the last path.
+We know if $i = n - 1$ then it must be the last state of the last path. The second case is if $z[i](q_0) = q_0$ and $s \in F$ holds. We know if $z[i](q_0) = q_0$ holds then it is a possible final state that was mapped to $q_0$. And if $s \in F$ then since $q_0 \notin F$ we know $z[i](q_0) \neq s$ meaning the reason $z[i](q_0) = q_0$ must be because of a reset by composition being safe. Therefore it must be a final state in a path that is not the last path.
 
-Step 5-7. will first keep every last state by this predicate. Afterwards it is asserted that the last state $s \in F$. Only the last state of the last path is needed since all previous path would had been valid else it would had not been reset by composition being safe. Finally just map every state to the token it has.
+Step 5-7. will first keep every last state by this predicate. Afterwards it is asserted that the last state is $s \in F$. This only done for the last state of the last path since all previous paths would had been valid else they would had not been reset. Finally just map every state to the token it has.
 
 \begin{example}[Problems with this method]\label{ex:overlap}
   If we had the following three patterns.
@@ -332,12 +336,12 @@ Step 5-7. will first keep every last state by this predicate. Afterwards it is a
   \begin{align*}
     a(aaa)a
   \end{align*}
-  The token sequence of this input could be determined to be $\tau_1, \tau_2, \tau_3$ with spans $(0, 3), (3, 4), (4, 7)$ if you reset at the last acceptings state. But since the algorithm resets at the last state from an accepting state then it fails. Meaning it would be able to recongnize $\tau_1$. The problem is at the token $\tau_2$ would get the span $(3, 5)$ and then the algorithm would not recongnize any token with the pattern $)a$.
+  The token sequence of this input could be determined to be $\tau_1, \tau_2, \tau_3$ with spans $(0, 3), (3, 4), (4, 7)$ if you reset at the last acceptings state. But since the algorithm resets at the last state from an accepting state then it fails. Meaning it would be able to recongnize $\tau_1$. The problem is at the token $\tau_2$ since it would get the span $(3, 5)$ and then the algorithm would not recongnize any token with the pattern $)a$.
 \end{example}
-\noindent There exists an alternative to this method given in Robin Voetters masterthesis \cite[13-16]{voetter2021}. This is done by constructing a NFA for each tokens regular expression pattern. Then create a new NFA where there is an epsilon transition from the initial state to every tokens NFAs inital state. Then you would convert this NFA into a DFA where you would have a function $\mathcal{T}$ which maps final state to a token. Then for every outgoing transition $\delta(q_0, t) = q$ of the DFA then we add a transition from a final state $q_s \in F$ such that if $(q_s, t) \notin \text{dom}(\delta)$ then $\delta(q_s, t) = q$. If any of these new transitions are visited during the traversal of the DFA then a token is produced. We also have to account for the first transition visited which also will be a producing a token.
+\noindent There exists an alternative to this method given in Robin Voetters master thesis \cite[13-16]{voetter2021}. This is done by constructing a NFA for each token. Then create a new NFA where there is an epsilon transition from the initial state to each tokens NFAs inital state. Then you would convert this NFA into a DFA where you would have a function $\mathcal{T}$ which maps final states to a token. Then for every outgoing transition $\delta(q_0, t) = q$ of the DFA then we add a transition from a final state $q_s \in F$ such that if $(q_s, t) \notin \text{dom}(\delta)$ then $\delta(q_s, t) = q$. If any of these new transitions are visited during the traversal of the DFA then a token is produced. We also have to account for the first transition visited which also will be a producing a token.
 
 \subsection{Concrete Syntax Trees}
-The alpacc parser generator is a parser generator which creates parser for the LLP grammer class. The LLP parsers described in the LLP parsing paper \cite{Vagner2007} only touches upon the verification and production sequence construction of parsing not the creation of concrete the syntax tree. This would also had to be done in a data-parallel manner else we would run into a bottle-neck. A method for this is described in Voetters master thesis \cite[32-33]{voetter2021} about compilation on the GPU. Here it is described how to create a concrete syntax tree using the representation from Hsu PhD dissertation \cite[77-81]{hsu2019} where you have a parent that can be used for multiple transformations of a syntax tree. The representation of the tree will be an array of nodes where each node has the index to its parent node. The nodes will also be given in a preorder traversal of the tree. This kind of representation is much more fit for data parallelism than some recursive datatype.
+The Alpacc parser generator is a parser generator which creates parser for the LLP grammer class. The LLP parsers described in the LLP paper \cite{Vagner2007} only touches upon the verification and production sequence construction of parsing, not the creation of concrete syntax trees. This will also had to be done in a data-parallel manner else we would run into a bottle-neck. A method for this is described in Voetters master thesis \cite[32-33]{voetter2021} about compilation on the GPU. Here it is described how to create a concrete syntax tree using the representation from Hsu PhD dissertation \cite[77-81]{hsu2019} where you have a parent vector that can be used for multiple transformations of the syntax tree. The representation of the tree will be an array of nodes where each node has the index to its parent node. The nodes will also be given in a preorder traversal of the tree.
 
 \subsubsection{Concrete Syntax Tree Construction}
 So as an example we wish to construct syntax tree for the grammar.
@@ -384,15 +388,15 @@ The first problem to tackle is terminals are not included in the left parse retu
 \begin{gather*}
   [E_1, T_4, E_2', T_5, E_1, T_4, E_2', T_4, E_3', E_3']
 \end{gather*}
-To create the syntax trees the first problem is how to weave together the production sequence with the sequence of terminals. This is done by extending the grammar such that each terminal is associated with a unique production. That way a production in the production sequence will ahve a direct correspondent to a terminal. This can then be use when constructing the syntax tree.
+To create the concrete syntax trees the first problem is how to weave together the production sequence with the sequence of terminals. This is done by extending the grammar such that each terminal is associated with a unique production. That way a production in the production sequence will have a direct correspondent to a terminal. This can then be used when constructing the syntax tree.
 \begin{gather*}
   [E_1, T_4, A_a, E_2', A_+, T_5, A_[, E_1, T_4, A_a, E_2', A_+, T_4, A_a, E_3', A_], E_3']
 \end{gather*}
-Here $A_t$ is a production that produces the single terminal it represents. Then we can just map everyone of these productions to its terminal like so.
+Here $A_t$ is a production that produces the terminal it represents. Then we can just map everyone of these productions to its terminal like so.
 \begin{gather*}
   [E_1, T_4, a, E_2', +, T_5, [, E_1, T_4, a, E_2', +, T_4, a, E_3', ], E_3']
 \end{gather*}
-A concern with this method is if this changes the number of grammars that can be parsed by LLP or if it changes the size of the table used for LLP parsing. These problem does not exists for this extension and it is later prooven these problems does not exists.
+A concern with this method is if this changes the number of grammars that can be parsed by LLP or if it changes the size of the table used for LLP parsing. These problems does not exists for this extension and it is later shown these problems does not exists.
 
 The parent vector can then be constructed with the following algorithm.
 \begin{algorithm}[Parent Vector]\label{algo:parent}
@@ -416,10 +420,10 @@ The parent vector can then be constructed with the following algorithm.
       a_4 = \mathbf{map} \: prev \: a_3
     \end{align*}
     Here $prev$ is a function that finds the index of the previous smaller or equal element in $a_3$.
-    \item Set the first elements parents to be it self. $a_5 = a_4[0] = 0$
+    \item Set the first elements parent to be it self. $a_5 = a_4[0] = 0$
   \end{enumerate}
 \end{algorithm}
-Using this algorithm we can show the computation of parent vector for the example.
+\noindent Using this algorithm we can show the computation of parent vector for the example.
 \begin{table}[H]
   \centering
   \begin{tabular}{c|c|c|c|c|c}
@@ -442,14 +446,14 @@ Using this algorithm we can show the computation of parent vector for the exampl
     0 & -1 & 1 & 5  & $]$    & 15 \\ \hline
     0 & -1 & 0 & 3  & $E'_3$ & 16
   \end{tabular}
-  \caption{Overview of how the parent vector is constructed.}
+  \caption{Example of how the parent vector is constructed.}
 \end{table}
-Note how the arity for the original productions end up being the number of of symbols in the right-hand side while each terminal symbol ends up being zero. This is due to the extension done to the original grammar.
+\noindent Note how the arity for the original productions ends up being the number of symbols in the right-hand side while each terminal symbol ends up being zero. This is due to the extension done to the original grammar.
 
-Step 4. in algorithm \ref{algo:parent} could be solve in different ways. A possible way to do it in a data-parallel manner is doing a linear backwards search. This would lead to $O(n^2)$ work and $O(n)$ span. This would be a pretty huge bottle neck-compared to the $O(n)$ work and $O(\log n)$ span for both tokenization and parsing. So a method for finding the previous smaller or equal element is used. This can be done in $O(n \log n)$ work and $O(\log n)$ span as described in Voetters masterthesis \cite[32-33]{voetter2021}.
+Step 4. in algorithm \ref{algo:parent} can be solved in different ways. A possible way to do it in a data-parallel manner is doing a linear backwards search. This would lead to $O(n^2)$ work and $O(n)$ span. This would be a pretty huge bottle neck-compared to the $O(n)$ work and $O(\log n)$ span for both tokenization and parsing. So a method for finding the previous smaller or equal element is used. This can be done in $O(n \log n)$ work and $O(\log n)$ span as described in Voetters master thesis \cite[32-33]{voetter2021}.
 
 \begin{algorithm}[Previous Smaller or Equal Element]\label{algo:psee}
-  Given an array of $a_0$ where $|a_0| = 2^n$ and the array contains some set of elements $A$ where $(\leq, A)$ is a total order.
+  Given an array of $a_0$ where $|a_0| = 2^n$ and the array contains some set of elements $A$ where $(\leq, A)$ is a total ordering.
   \begin{enumerate}
     \item Construct tree of minima.
     \begin{align*}
@@ -463,7 +467,7 @@ Step 4. in algorithm \ref{algo:parent} could be solve in different ways. A possi
     \begin{align*}
       \mathbf{let} \: tree = create \: a_0
     \end{align*}
-    \item To find the previous smaller or equal element of a value $v$ with index $i$. We will first find the common ancestor of the elements from $i$ some previous smaller or equal element that may exists. 
+    \item To find the previous smaller or equal element of a value $v$ with index $i$. We will first find the common ancestor of the elements from $i$ assuming some previous smaller or equal element exists. 
     \begin{align*}
       &\mathbf{let} \: ascent \: j = \\
       &\quad \mathbf{if} \: j \neq 0 \land (left \: j \lor tree[sibling \: j] > v) \\
@@ -585,7 +589,7 @@ To implement tokenization we run into the problem that we want to represent an p
 \begin{lstlisting}{language=futhark,numbers=none}
   let compose a b = map(\i -> a[i]) b
 \end{lstlisting}
-This was at some time the implementation of alpacc but it is possible to go faster. You can enumerate every composed partially applied delta function and create a table of compositions. Then your function composition would become.
+This was at some time the implementation of Alpacc but it is possible to go faster. You can enumerate every composed partially applied delta function and create a table of compositions. Then your function composition would become.
 \begin{lstlisting}{language=futhark,numbers=none}
   let compose a b = composition_table[a, b]
 \end{lstlisting}
@@ -608,46 +612,46 @@ This ends up being the final set. This can also be done on the set of compositio
 \section{Tests}
 \subsection{Tokenization}
 \subsubsection{General Testing}
-To test the tokenization it is compared with a sequential version. The sequential version works much like the data-parallel version. It will traverse the DFA until it reaches a dead state. Afterwards it will determine if the previous state was accepting if so then reset the traversal else the input could not be tokenized.
+To test the tokenization a data-parallel lexer is compared with a sequential version. The sequential version works much like the data-parallel version. It will traverse the DFA until it reaches a dead state afterwards it will determine if the previous state was accepting, if so then reset the traversal else the input could not be tokenized.
 
-The testing strategy is then to choose some set of patterns and and strings of interest. Then compare if the sequence of tokens with their spans are the same. One of the set of patterns that was deemed interesting are the one given in Example \ref{ex:overlap}.
+The testing strategy is to choose some set of patterns and strings of interest. Then compare if the sequence of tokens with their spans are the same. One of the set of patterns that was deemed interesting are the one given in Example \ref{ex:overlap}.
 \begin{align*}
   \tau_1 = a(a \qquad \tau_2 = a\text{+} \qquad \tau_3 = a)a \qquad \tau_4 = \backslash s|\backslash n |\backslash t | \backslash r
 \end{align*}
-Here something like $a(aa)a$ can get recongnized while $a(aaa)a$ can not get recongnized. This test is to make sure concat, alternation, and the one-or-more pattern works as expected. This is tested multiple times using other test cases also. What is more important, it also assures that $a(aaa)a$ will fail. Another pattern of interest is.
+Here something like $a(aa)a$ can get recongnized while $a(aaa)a$ can not get recongnized. This test is to make sure concat, alternation, and the one-or-more pattern works as expected. This is tested multiple times using other test cases also. It also assures that $a(aaa)a$ will fail. Another pattern of interest is.
 \begin{align*}
   \tau_1 = \mathbf{if} \qquad \tau_2 = \mathbf{then} \qquad \tau_3 = \mathbf{else} \qquad \tau_4 = [a\text{-}z]+ \qquad \tau_5 = \backslash s|\backslash n |\backslash t | \backslash r
 \end{align*}
 Here we want the key words $\mathbf{if}$, $\mathbf{then}$, and $\mathbf{else}$ to be associated with a token before it is associated with $\tau_4$. Here the order the tokens are defined are the order they are prioritized from most important to least. There were also some other interesting patterns and inputs but these examples gives a good idea of cases tested for. \footnote{The different cases tested for can be found \href{https://github.com/diku-dk/alpacc/tree/20b98004bb18bfd7d8031ffaf053f382f821889a/futhark-tests/lexer-tests}{here}.}
 
 A problems with this method of testing is it is limited to single examples and what properties the author finds to be interesting. There might be edge cases that were missed and not accounted for since they did not seem to be of interest.
-\subsubsection{Large LISP Input}
-Since the general testing is only on small inputs of the DFA it would also be good to test on large randomized inputs. This would give greater confidence in the lexer generator works as expected. This is done by a LISP lexer is compared with a LISP lexer made with the Logos lexer library. Here a large randomized input that could be tokenized by a LISP lexer is created randomly.
+\subsubsection{Large Lisp Input}
+Since the general testing is only on small inputs then it would also be good to test on large randomized inputs. This would give greater confidence in the lexer generator working as expected. This is done by a data-parallel Lisp lexer being compared with another Lisp lexer made with the Logos lexer library. Here a large randomized input that could be tokenized by a Lisp lexer is created randomly and the input is about $100MiB$.
 
 \subsection{Parent Vector}
-To assert the correctness of the parent vector construction the algorithm for finding the previous equal or smaller element is tested. The reason for only testing this is the steps 1-3. in algorithm \ref{algo:parent} do offer much complexity. A problem with this testing method is it assumes the correctness of the parent vector algorithm. Also something to consider is why not testing that the concrete syntax trees correspond to a sequential version. This is because the parent vector is the last step in testing since the production sequence is already tested in Alpacc \cite{due2023}.
+To assert the correctness of the parent vector construction the algorithm for finding the previous equal or smaller element is tested. The reason for only testing this is the steps 1-3. in algorithm \ref{algo:parent} do not offer much complexity. A problem with this testing method is it assumes that some parts of the algorithm is correct. It also assumes as a whole the algorithm is correct. Also something to consider is why not testing that the concrete syntax trees correspond to a sequential version. This is because the parent vector is the last step in testing since the production sequence is already tested in Alpacc \cite{due2023}.
 
-The strategy for testing is using property based testing. This is done by property based testing. The property tested for is given an array $a$ of 32-bit integers then $f$ maps algorithm \ref{algo:psee} over $a$. Then the result of $f(a)$ should be the same as if $g$. Here $g$ is an implementation that for every element in the the array does a backwards linear search to find the previous smaller or equal element. Then the follow property should be fulfilled.
+The strategy for testing is using property based testing. The property tested for is given an array $a$ of 32-bit integers then $f$ maps algorithm \ref{algo:psee} over $a$. This results in $f(a)$ should be the same as $g(a)$. Here $g$ is an implementation that for every element in the array does a backwards linear search to find the previous smaller or equal element. Then the following property should be fulfilled.
 \begin{align*}
   \forall a. f(a) = g(a)
 \end{align*}
-Since not all $a$ can be tested then $a$ is randomized a given amount of times. Also note if the previous or smaller element does not exists then $f$ and $g$ will map to $-1$.
+Since not all $a$ can be tested then $a$ is randomized. Also note if the previous or smaller element does not exists then $f$ and $g$ will map to $-1$.
 
 \section{Benchmarks}
 \subsection{Lisp lexer}
-To assert the performance of a data-parallel some benchmarks of Lisp lexers are compared. These Lisp lexers understand the following tokens patterns.
+To assert the performance of a data-parallel lexer some benchmarks of Lisp lexers are compared. These Lisp lexers recongnize the following tokens patterns.
 \begin{align*}
-  \tau_1 = \: ( \qquad \tau_2 = \: \:) \qquad \tau_3 = [a\text{-}zA\text{-}Z0\text{-}9]+ \qquad \tau_4 = (\backslash s|\backslash n |\backslash t | \backslash r)+
+  \tau_1 = \: ( \qquad \tau_2 = \: \:) \qquad \tau_3 = [a\text{-}zA\text{-}Z0\text{-}9]\text{+} \qquad \tau_4 = (\backslash s|\backslash n |\backslash t | \backslash r)+
 \end{align*}
 Here $\tau_1$ and $\tau_2$ are the open and closing parenthesis in S-expressions. $\tau_3$ are the atoms while $\tau_4$ is the spacing between the important tokens for the grammar $\tau_1$, $\tau_2$, and $\tau_3$.
 
-The benchmarks are of three lexers in different languages and described below
+The benchmarks are of three different lexers and are named by the languages they are written in.
 \begin{itemize}
-  \item Rust: A lexer made with the Logos library which saves every token in memory which must be done for the data-parallel lexer.
-  \item C: A lexer written by Troels Henriksen. 
-  \item Futhark: A data-parallel lexer from Alpacc \cite{due2023} using the method described.
+  \item Rust: A lexer made with the Logos library and every token is kept in memory.
+  \item C: A lexer written by Troels Henriksen. Not all tokens are kept in memory.
+  \item Futhark: A data-parallel lexer from Alpacc \cite{due2023} using the method described and keeps every token in memory.
 \end{itemize}
-The benchmarks are measured using a Ryzen 5 1600x CPU and a Nvidia RTX 3060 GPU. Which may not seem like a fair comparison since the CPU was released in 2017 and the GPU was released in 2021.\footnote{When taking these benchmarks I did not have access to other hardware since I could not get on the university VPN to access the compute cluster Hendrix.} We will just have to assume this is comparable since single threaded performance has stalled the past 10 years.
+The benchmarks are measured using a Ryzen 5 1600x CPU and a Nvidia RTX 3060 GPU. Which may not seem like a fair comparison since the CPU was released in 2017 and the GPU was released in 2021. This was the chosen method of benchmarking since I was not able to get consistent measurements on the compute cluster Hendrix. Also single threaded performance should have stalled the past years so it did not seem like a large concern.
 
 \begin{table}[H]
   \centering
@@ -664,7 +668,7 @@ The benchmarks are measured using a Ryzen 5 1600x CPU and a Nvidia RTX 3060 GPU.
     90 & 430,997 & 234,474 & 34,591 \\
     100 & 469,772 & 248,722 & 39,199
   \end{tabular}
-  \caption{Lisp Lexer Benchmarks}
+  \caption{Lisp Lexer Benchmarks. The Futhark benchmarks uses the CUDA backend.}
 \end{table}
 
 \begin{figure}[H]
@@ -672,7 +676,7 @@ The benchmarks are measured using a Ryzen 5 1600x CPU and a Nvidia RTX 3060 GPU.
   \includegraphics[width=\linewidth]{plot.png}
   \caption{Lisp Lexer Benchmarks}
 \end{figure}
-\noindent As we see from the plot the times grows roughly linearly with the input size for all the benchmarks. So we can use the linear equations found to solve for each lexers throughput in GiB/s.
+\noindent As we see from the plot the time elapsed grows roughly linearly with the input size for all the benchmarks. So we can use the linear equations found to solve for each lexers throughput in GiB/s.
 \begin{table}[H]
   \centering
   \begin{tabular}{c|c|c|c}
@@ -681,10 +685,21 @@ The benchmarks are measured using a Ryzen 5 1600x CPU and a Nvidia RTX 3060 GPU.
   \end{tabular}
   \caption{Lisp Lexers Throughput}
 \end{table}
-
+\noindent As we see a data-parallel Lisp lexing is about 5 times faster than the C Lisp lexer and 12 times faster than the rust lexer.
 \section{Discussion}
-As we see the the throughput of 
+A problem with this method is it has to do more passes when lexing unlike a sequential implementation. Meaning this method would likely not be great for smaller inputs. But For large datasets this method does seem like a possible usecase, such as tokenization of English. It could also be useful for formal language processing for large datasets such as JSON and CSV. CSV is a very simple formal language and the correctness of a CSV file could possibly be asserted by counting the number of tokens in each line. Maybe also some type checking for each column in the CSV file.
+
+In the case of JSON we would have to utilize the LLP parser in Alpacc \cite{due2023} and the concrete tree constructions presented. The LLP parsing method should not be more expensive than the lexing since the tokens in JSON are normally quite long. The lexing mainly relies on a fast radix sort like CUBs which can sort 15GB/s 32-bit keys on a Titan X \cite{StehleJ16}. We would also have to keep in mind that a Titan X (Pascal) is more powerful than a RTX 3060 so the comparison is unfair\footnote{\href{https://gpu.userbenchmark.com/Compare/Nvidia-Titan-X-Pascal-vs-Nvidia-RTX-3060/m158352vs4105}{The performance difference does not seem that great.}}.
+
+The concrete syntax tree construction should neither be a problem. This is again because it works on a smaller input because only the tokens and productions are considered. A problem is it does seem like if parsing can be done with a throughput 15GB/s then lexing is quite the bottle-neck. Maybe the lexing could be done faster by hand optimized CUDA code. But the lexer is a very simple implementation and Futhark has a mature compiler that will optimize the CUDA code.
+
 \section{Conclusion}
-Conclusion.
+The implementation of the lexer generator and the concrete syntax tree construction is believed to work. A fast data-parallel lexer implementation is also created but it does not seem fast enough. A data-parallel Lisp lexer on an RTX 3060 is only 12 times faster than Logos Lisp lexer. This seems unexpected since the Lisp lexer only uses a few data-parallel scans and maps. It could be the case that the scan using table lookups for function compositions is the problem. 
+
+It is believed the concrete syntax tree construction and parsing of Alpacc should be fast enough. These parts are actually not benchmarked but they will most likely work on inputs smaller than the lexer. Also for the case of parsing it is known that it is almost just a radix sort so its throughput should be fast. And for the case of concrete syntax tree construction it will roughly be three maps so it is not concerning.
+
+Overall the project did result in a working and faster than a sequential implementation of a lexer. The project also contributed with theoretical explanations of data-parallel lexing and concrete syntax tree construction. In regards to the tree it was shown that the LLP parser can be extended to create concrete syntax trees while still being able to parse every LLP grammar. 
+
+\newpage
 \printbibliography
 \end{document}
